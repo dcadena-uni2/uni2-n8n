@@ -1,0 +1,88 @@
+{
+  "name": "Reconstruye · Base de datos",
+  "nodes": [
+    {
+      "id": "f7010d5e-1999-40f1-976a-d57591400534",
+      "name": "Nota · Cambiar ambiente",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -260
+      ],
+      "parameters": {
+        "content": "## Base de datos de Reconstruye\nTodas las consultas del flujo **Reconstruye** pasan por el nodo **Ejecutar consulta**.\n\n### Para cambiar de ambiente (DEV / QA / PROD)\n1. Abrir el nodo **Ejecutar consulta**.\n2. Cambiar la credencial (Postgres uni2_dev, Postgres uni2_qa, …).\n3. Publicar este subflujo.\n\nEl banner del formulario sale de esta misma conexión, así que siempre muestra la base real.\n**No** cambiar credenciales en el flujo principal: allá no hay nodos Postgres.",
+        "width": 760,
+        "height": 300,
+        "color": 5
+      }
+    },
+    {
+      "id": "c25764b0-b6ea-4c64-a0b1-a77862827ed2",
+      "name": "Recibir consulta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -200,
+        100
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "sql",
+              "type": "string"
+            },
+            {
+              "name": "params",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "514d94b0-3e01-411b-88fe-d064d44093d5",
+      "name": "Ejecutar consulta",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        60,
+        100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {
+          "queryReplacement": "={{ $json.params }}",
+          "queryBatching": "transaction"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "wbEzFJcs2niCUwGx",
+          "name": "Postgres uni2_qa"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Recibir consulta": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": []
+}

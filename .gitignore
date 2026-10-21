@@ -1,0 +1,15 @@
+# Secretos y configuración local
+.mcp.json
+.claude/settings.local.json
+.claude/*.lock
+.env
+.env.*
+
+# Respaldos, ejecuciones y datos reales (solo locales)
+backups/
+*_ejecucion_*.json
+
+# Python / Node
+__pycache__/
+*.pyc
+node_modules/

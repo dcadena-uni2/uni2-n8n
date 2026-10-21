@@ -1,0 +1,3003 @@
+{
+  "name": "Login Microsoft 365",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Auth · Microsoft 365\nSubflujo reutilizable de inicio de sesión con **Microsoft 365** (Entra ID, OpenID Connect con código de autorización). Issue #389.\n\nLos **webhooks y las páginas** siguen en cada flujo: este subflujo solo hace la parte de seguridad y devuelve datos.\n\n### Entradas (Execute Workflow)\n| Campo | Uso |\n|---|---|\n| `operacion` | `iniciarLogin` · `procesarCallback` · `verificarSesion` · `cerrarSesion` |\n| `app` | Clave en *Registro de aplicaciones* (`reconstruye`, `extractor`, `rindegastos`) |\n| `redirectUri` | URL del webhook de regreso (debe estar registrada) |\n| `cookies` | Cabecera `Cookie` del webhook (`$json.headers.cookie`) |\n| `query` | Query del webhook de regreso (`$json.query`) |\n| `tokenSesion` | Campo oculto `_sesion` (modo jwt) o campo `sesion` del Form (modo tabla) |\n\n### Salida\n`ok: true` + datos de la operación (`urlRedireccion`, `setCookie`, `usuario`, `tokenSesion`, `campoOculto`, `sesionId`…), u\n`ok: false` + `codigo`, `accion` (`login` · `reintentar` · `contactar_ti`), `titulo`, `mensaje`, `consejos`, `detalle` y `html` (ya escapado).\n\n### Dos modos de sesión (`modoSesion` en el registro)\n- **jwt** (flujos con webhooks, p. ej. Reconstruye): **JWT firmado** con la credencial *Auth M365 · Firma de sesiones*, con claim `app`. Viaja en cookie + campo oculto.\n- **tabla** (p. ej. Rindegastos SAP, Webhook + Wait form): **id aleatorio** (256 bits) en la Data Table **auth_m365_sesiones**. Viaja en la cookie de la app (`cookieSesion`) o en `tokenSesion`; se **revoca** al cerrar sesión.\n\n### Seguridad\n- `state` aleatorio (256 bits), **un solo uso**, 10 min, en la Data Table **auth_m365_inicios**.\n- `nonce` en cookie: el regreso solo sirve en el navegador que inició el ingreso.\n- Las tablas son compartidas por todas las apps: cada fila lleva `app` (y `email`) y siempre se exige que la app coincida.\n- **auth_m365_registro_accesos**: eventos `inicio_sesion` y `cierre_sesion` (fecha, app, usuario), 90 días.\n- No se guardan tokens de Microsoft.",
+        "height": 1180,
+        "width": 480,
+        "color": 7
+      },
+      "id": "a66d222f-fa31-4dfe-a76d-60bfbebfb4e3",
+      "name": "Nota 0 · Resumen",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ① iniciarLogin\nGenera `state` y `nonce`, guarda el `state` 10 min y devuelve la URL de Microsoft.\nEl flujo responde **302** a `urlRedireccion` con la cabecera `Set-Cookie: setCookie`.",
+        "height": 320,
+        "width": 1140,
+        "color": 6
+      },
+      "id": "38eb0427-d41d-49c7-a7ff-ea5a4d1fba55",
+      "name": "Nota 1 · iniciarLogin",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ② procesarCallback\nRevisa la respuesta de Microsoft → busca y **borra** el `state` → limpia vencidos → valida `state` y cookie de `nonce` → canjea el código con la credencial **de la app** → valida el `id_token` (`alg`, `aud`, `azp`, `iss`, `tid`, `exp`, `nbf`, `iat`, `nonce`, dominio) → crea la sesión según el modo.\n- **jwt:** firma la sesión; el flujo responde **303** a su página inicial con `Set-Cookie: setCookie`.\n- **tabla:** guarda la sesión en *auth_m365_sesiones*; el flujo responde con `Set-Cookie: setCookie` (o usa `sesionId`).",
+        "height": 580,
+        "width": 4240,
+        "color": 4
+      },
+      "id": "12685bdc-067e-496a-bb2d-093316f9140f",
+      "name": "Nota 2 · procesarCallback",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ③ verificarSesion\n- **jwt:** sesión del campo oculto (`tokenSesion`) o de la cookie de la app; verifica firma y vencimiento, y que sea de esta `app`.\n- **tabla:** busca el id (`tokenSesion`) en *auth_m365_sesiones*; exige que exista, sea de esta `app` y no haya vencido.\nDevuelve `usuario` (y `campoOculto` / `sesionId`).",
+        "height": 500,
+        "width": 1600,
+        "color": 5
+      },
+      "id": "7f354ac3-b000-4c8c-883c-4311ba98bea3",
+      "name": "Nota 3 · verificarSesion",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ④ cerrarSesion\n- **jwt:** devuelve la cookie de borrado (un JWT no se revoca en el servidor).\n- **tabla:** busca y borra la fila de la sesión: el id deja de servir (sesión anulada).\nEn los dos casos deja el evento `cierre_sesion` en **auth_m365_registro_accesos**.",
+        "height": 400,
+        "width": 1600,
+        "color": 3
+      },
+      "id": "f9b6c2be-9664-4160-851e-e2a06fde80e1",
+      "name": "Nota 4 · cerrarSesion",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✖ Errores\nTodos los rechazos llegan aquí con un `codigo`. Este nodo es el **único lugar** con los mensajes para el usuario.",
+        "height": 340,
+        "width": 460,
+        "color": 2
+      },
+      "id": "a02709f8-c060-479b-94b8-da98b839430d",
+      "name": "Nota 5 · Errores",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⑤ Limpieza diaria (3:00 a. m.)\n- **auth_m365_sesiones**: borra las sesiones vencidas → la tabla solo tiene **sesiones activas** (usuario, app, inicio, vence).\n- **auth_m365_inicios**: borra los inicios de login sin terminar.\n- **auth_m365_registro_accesos**: borra eventos de más de **90 días**.\n\n**Ver quién está conectado:** abrir *auth_m365_sesiones* (filtrar por `app`).\n**Anular una sesión:** borrar su fila; la persona queda fuera en su siguiente petición (apps en modo *tabla*).",
+        "height": 320,
+        "width": 900,
+        "color": 7
+      },
+      "id": "02d82233-3c6c-48ed-aab3-4834cb46f477",
+      "name": "Nota 7 · Limpieza",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Una rama por app\nn8n no permite elegir la credencial en tiempo de ejecución: cada app tiene su nodo de canje con su secreto.\n**Extractor:** usa por ahora la misma credencial Custom Auth que *Acceso Office 365*; en la fase 3 pasa a Basic Auth.",
+        "height": 200,
+        "width": 460
+      },
+      "id": "c5f04e26-6842-4ad6-8591-83816facc477",
+      "name": "Nota 6 · Canje",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "operacion"
+            },
+            {
+              "name": "app"
+            },
+            {
+              "name": "redirectUri"
+            },
+            {
+              "name": "cookies"
+            },
+            {
+              "name": "query",
+              "type": "object"
+            },
+            {
+              "name": "tokenSesion"
+            }
+          ]
+        }
+      },
+      "id": "ee1711e7-af0a-420f-b8fc-46fc4892ddee",
+      "name": "Entrada",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// REGISTRO DE APLICACIONES · Auth · Microsoft 365 (issue #389)\n// ------------------------------------------------------------\n// Única fuente de configuración del inicio de sesión con Microsoft 365 (Entra ID, OpenID Connect).\n// Cada flujo que usa este subflujo tiene aquí su entrada, identificada por \"app\".\n// Los secretos de cliente NO van aquí: están en las credenciales de los nodos \"Canje · …\".\n//\n// Para agregar una aplicación:\n//   1. Entrada nueva en APPS con el siguiente número de \"ramaCanje\".\n//   2. Credencial (Basic Auth: usuario = client id, contraseña = secreto de cliente).\n//   3. Salida nueva en \"Canje: elegir app\" + nodo \"Canje · <app>\" conectado a \"Callback: validar identidad\".\n//\n// modoSesion:\n//   'jwt'   → flujos con webhooks y páginas propias (cookie + campo oculto \"_sesion\"). Sesión = JWT firmado.\n//   'tabla' → flujos con Form de n8n: la sesión viaja en ?sesion=<id> (el Form solo recibe datos por la URL).\n//             El id es aleatorio (256 bits), se guarda en la Data Table \"auth_m365_sesiones\" y se revoca al cerrar sesión.\n// ============================================================\nconst TENANT_UNI2 = 'f6c1b7c0-d15b-446c-baa7-b6392213858a'; // directorio de UNI2\nconst INSTANCIA = 'https://uni2.app.n8n.cloud';\n\nconst APPS = {\n  reconstruye: {\n    nombre: 'Reconstruye',\n    tenantId: TENANT_UNI2,\n    clientId: '10632875-87cd-4b0f-b3b7-e0fac2f288ee', // app \"n8n Reconstruye\" (solo grupo Desarrollo de Software)\n    redirectUris: [`${INSTANCIA}/webhook/reconstruye-auth`, `${INSTANCIA}/webhook/reconstruye-dev-auth`],\n    urlDestino: `${INSTANCIA}/webhook/reconstruye`, // a dónde llega el usuario tras el login\n    dominiosPermitidos: ['uni2.com.co'],\n    modoSesion: 'jwt',\n    duracionSesionSegundos: 3600,\n    cookieNonce: 'rc_nonce',\n    cookieSesion: 'rc_sesion',\n    rutaCookie: '/webhook',\n    campoSesion: '_sesion',\n    prompt: 'select_account',\n    ramaCanje: 0,\n  },\n  extractor: {\n    nombre: 'Extractor de Facturación SIIF',\n    tenantId: TENANT_UNI2,\n    clientId: 'e3e95678-765e-4730-8473-027150d453f4', // app del Extractor (todo el directorio UNI2)\n    redirectUris: [`${INSTANCIA}/webhook/extractor-pagares/callback`],\n    urlDestino: `${INSTANCIA}/form/extractor-pagares`,\n    dominiosPermitidos: ['uni2.com.co'],\n    modoSesion: 'tabla', // Form de n8n\n    duracionSesionSegundos: 8 * 3600,\n    cookieNonce: 'ext_nonce',\n    prompt: '',\n    ramaCanje: 1,\n  },\n  rindegastos: {\n    nombre: 'Rindegastos SAP',\n    tenantId: TENANT_UNI2,\n    clientId: '83fa3a4d-4c54-4ec7-a7c7-a4da3a7f8318', // app \"Flujo n8n - Rindegastos SAP\" (asignación requerida)\n    redirectUris: [`${INSTANCIA}/webhook/rindegastos-sap-auth`, `${INSTANCIA}/webhook/rindegastos-sap-dev-auth`],\n    urlDestino: 'https://uni2.app.n8n.cloud/webhook/rindegastos-sap', // webhook de entrada del flujo (Webhook + páginas propias)\n    dominiosPermitidos: ['uni2.com.co'],\n    modoSesion: 'tabla', // id revocable en \"auth_m365_sesiones\", viaja en cookie + campo oculto\n    duracionSesionSegundos: 8 * 3600,\n    cookieNonce: 'rg_nonce',\n    cookieSesion: 'rg_sesion',\n    rutaCookie: '/webhook',\n    campoSesion: '_sesion',\n    prompt: 'select_account', // como Reconstruye: tras cerrar sesión, Microsoft muestra el selector de cuenta\n    ramaCanje: 2,\n  },\n};\n\n// Índice = salida del nodo \"Operación\" (4 = error)\nconst OPERACIONES = ['iniciarLogin', 'procesarCallback', 'verificarSesion', 'cerrarSesion'];\n\nconst entrada = $input.first().json;\nconst operacion = String(entrada.operacion ?? '').trim();\nconst app = String(entrada.app ?? '').trim().toLowerCase();\nconst cfg = Object.prototype.hasOwnProperty.call(APPS, app) ? APPS[app] : null;\nconst redirectUri = String(entrada.redirectUri ?? '').trim().split('?')[0];\n\n// \"cookies\" llega como la cabecera Cookie completa del webhook\nconst cookies = {};\nString(entrada.cookies ?? '').split(';').forEach((par) => {\n  const i = par.indexOf('=');\n  if (i <= 0) return;\n  try {\n    cookies[par.slice(0, i).trim()] = decodeURIComponent(par.slice(i + 1).trim());\n  } catch (e) {\n    // cookie mal formada: se ignora\n  }\n});\n\nconst query = entrada.query && typeof entrada.query === 'object' ? entrada.query : {};\nconst tokenSesion = String(entrada.tokenSesion ?? '').trim();\n\nlet salida = OPERACIONES.indexOf(operacion);\nlet codigo = '';\nlet detalle = '';\nif (!cfg) {\n  codigo = 'app_desconocida';\n  detalle = `app \"${app}\"`;\n} else if (salida < 0) {\n  codigo = 'operacion_desconocida';\n  detalle = `operación \"${operacion}\"`;\n} else if (['iniciarLogin', 'procesarCallback'].includes(operacion) && !cfg.redirectUris.includes(redirectUri)) {\n  codigo = 'redirect_no_permitida';\n  detalle = redirectUri || '(vacía)';\n}\nif (codigo) salida = 4;\n\nreturn [{ json: { operacion, app, cfg, redirectUri, cookies, query, tokenSesion, salida, codigo, detalle } }];\n"
+      },
+      "id": "ee879828-b708-453d-89d3-060260ad20bb",
+      "name": "Registro de aplicaciones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 5,
+        "output": "={{ $json.salida }}"
+      },
+      "id": "f709ea77-2737-4075-8ba8-7612f487e30f",
+      "name": "Operación",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "action": "generate",
+        "dataPropertyName": "state",
+        "encodingType": "hex",
+        "stringLength": 64
+      },
+      "id": "51dfa09a-f8dc-479f-a76a-dee9b5416c9d",
+      "name": "Login: generar state",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "action": "generate",
+        "dataPropertyName": "nonce",
+        "encodingType": "hex",
+        "stringLength": 64
+      },
+      "id": "309b934d-49a6-4b54-a494-45c382dae5fe",
+      "name": "Login: generar nonce",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Arma la dirección de inicio de sesión de Microsoft y la fila que guarda el state 10 minutos.\n// state y nonce llegan de los nodos Crypto (el sandbox del nodo Code no tiene crypto).\nconst VIGENCIA_MS = 10 * 60 * 1000;\nconst HEX64 = /^[0-9a-f]{64}$/;\nconst { cfg } = base;\nconst { state, nonce } = $input.first().json;\nif (!HEX64.test(state ?? '') || !HEX64.test(nonce ?? '') || state === nonce) {\n  throw new Error('state/nonce sin el formato esperado: revise \"Login: generar state\" y \"Login: generar nonce\".');\n}\n\nconst parametros = {\n  client_id: cfg.clientId,\n  response_type: 'code',\n  redirect_uri: base.redirectUri,\n  response_mode: 'query',\n  scope: 'openid profile email',\n  state,\n  nonce,\n};\nif (cfg.prompt) parametros.prompt = cfg.prompt;\nconst consulta = Object.entries(parametros).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');\n\nreturn [{\n  json: {\n    urlAutorizacion: `https://login.microsoftonline.com/${encodeURIComponent(cfg.tenantId)}/oauth2/v2.0/authorize?${consulta}`,\n    fila: { state, nonce, app: base.app, expira: Date.now() + VIGENCIA_MS },\n  },\n}];\n"
+      },
+      "id": "197e8219-6a4e-41ad-b709-bf5109730d17",
+      "name": "Login: armar autorización",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "U4XPOwosUHbmvNuI",
+          "cachedResultName": "auth_m365_inicios",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/U4XPOwosUHbmvNuI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "state": "={{ $json.fila.state }}",
+            "nonce": "={{ $json.fila.nonce }}",
+            "app": "={{ $json.fila.app }}",
+            "expira": "={{ $json.fila.expira }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nonce",
+              "displayName": "nonce",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "expira",
+              "displayName": "expira",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c9dcf066-4414-4abd-a828-f5468319b50a",
+      "name": "Login: guardar state",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\nconst prep = $('Login: armar autorización').first().json;\nconst { cfg } = base;\nreturn [{\n  json: {\n    ok: true,\n    operacion: 'iniciarLogin',\n    app: base.app,\n    urlRedireccion: prep.urlAutorizacion,\n    // El flujo que llama responde 302 a urlRedireccion con esta cookie (ata el regreso a este navegador)\n    setCookie: `${cfg.cookieNonce}=${prep.fila.nonce}; Path=/webhook; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,\n  },\n}];\n"
+      },
+      "id": "2a65d27a-8393-490c-8d3e-4e15bb07222b",
+      "name": "Login: resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Clasifica el regreso desde Microsoft: ?code=…&state=… o ?error=…&error_description=…\nconst q = base.query;\n// Un parámetro repetido llega como lista: se toma el primero\nconst p = (nombre) => {\n  const v = Array.isArray(q[nombre]) ? q[nombre][0] : q[nombre];\n  return v === undefined || v === null ? '' : String(v).trim();\n};\nconst error = p('error');\nconst descripcion = p('error_description');\nconst code = p('code');\nconst state = p('state').toLowerCase();\n\nif (error) {\n  const aadsts = (descripcion.match(/AADSTS\\d+/) ?? [''])[0];\n  return [{\n    json: {\n      continuar: false,\n      codigo: aadsts || (error === 'access_denied' ? 'access_denied' : 'ms_error'),\n      detalle: `${error}${descripcion ? ' · ' + descripcion.replace(/\\s+/g, ' ').slice(0, 300) : ''}`,\n    },\n  }];\n}\nif (!code || !state) return [{ json: { continuar: false, codigo: 'respuesta_incompleta', detalle: '' } }];\nif (!/^[0-9a-f]{64}$/.test(state)) return [{ json: { continuar: false, codigo: 'state_invalido', detalle: '' } }];\n\nreturn [{ json: { continuar: true, code, state } }];\n"
+      },
+      "id": "00ca260b-1e4e-4a2d-9279-f97a2564452d",
+      "name": "Callback: revisar respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "72d557d3-c727-4109-826e-f390ea5bb949",
+              "leftValue": "={{ $json.continuar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bfa15b2e-21fa-407e-a785-25efee0de99b",
+      "name": "¿Respuesta completa?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "U4XPOwosUHbmvNuI",
+          "cachedResultName": "auth_m365_inicios",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/U4XPOwosUHbmvNuI"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "state",
+              "keyValue": "={{ $('Callback: revisar respuesta').first().json.state }}"
+            }
+          ]
+        },
+        "limit": 5
+      },
+      "id": "159c56e3-dd87-40c3-bed5-ad11342edb7b",
+      "name": "Callback: buscar state",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        1168,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "U4XPOwosUHbmvNuI",
+          "cachedResultName": "auth_m365_inicios",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/U4XPOwosUHbmvNuI"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "state",
+              "keyValue": "={{ $('Callback: revisar respuesta').first().json.state }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a79dd5d5-1ec5-454d-8741-3debd1dd9974",
+      "name": "Callback: consumir state",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        1392,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "U4XPOwosUHbmvNuI",
+          "cachedResultName": "auth_m365_inicios",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/U4XPOwosUHbmvNuI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "expira",
+              "condition": "lt",
+              "keyValue": "={{ $now.toMillis() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da5a54ff-938d-4a0b-ab92-abd402b7fd38",
+      "name": "Callback: limpiar vencidos",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        1600,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// El state debe existir, no estar vencido, ser de esta app y venir del mismo navegador (cookie de nonce).\n// \"Callback: consumir state\" ya lo borró: se usa una sola vez.\nconst { cfg } = base;\nconst revision = $('Callback: revisar respuesta').first().json;\nconst fila = $('Callback: buscar state').all()\n  .map((item) => item.json ?? {})\n  .find((f) => String(f.state ?? '').toLowerCase() === revision.state);\n\nlet codigo = '';\nif (!fila) codigo = 'state_inexistente';\nelse if (!(Number(fila.expira) > Date.now())) codigo = 'state_vencido';\nelse if (fila.app !== base.app) codigo = 'state_otra_app';\nelse if (base.cookies[cfg.cookieNonce] !== fila.nonce) codigo = 'navegador_distinto';\nif (codigo) return [{ json: { continuar: false, codigo, detalle: '' } }];\n\nreturn [{\n  json: {\n    continuar: true,\n    ramaCanje: cfg.ramaCanje,\n    nonce: fila.nonce,\n    code: revision.code,\n    redirectUri: base.redirectUri,\n    clientId: cfg.clientId,\n    tokenUrl: `https://login.microsoftonline.com/${encodeURIComponent(cfg.tenantId)}/oauth2/v2.0/token`,\n  },\n}];\n"
+      },
+      "id": "01a12829-c266-4653-b2e8-3b2ce6024927",
+      "name": "Callback: validar state",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9b916f0e-0c96-4e18-8cb7-8c78ea2922c3",
+              "leftValue": "={{ $json.continuar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "9b7de36b-85d4-4c30-9421-e6fd5f099300",
+      "name": "¿State válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2048,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ $json.ramaCanje }}"
+      },
+      "id": "eff99e24-55c1-4a1f-8f3b-8bc0dbee54d1",
+      "name": "Canje: elegir app",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2272,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.tokenUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "authorization_code"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $json.clientId }}"
+            },
+            {
+              "name": "code",
+              "value": "={{ $json.code }}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "={{ $json.redirectUri }}"
+            },
+            {
+              "name": "scope",
+              "value": "openid profile email"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "7eedcd5e-6f44-42cd-93d1-5e6043f1886a",
+      "name": "Canje · Reconstruye",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        64
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "BLXGJfzuND0fFwR4",
+          "name": "Reconstruye · Secreto Entra ID (vence 2027-10-14)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.tokenUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "authorization_code"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $json.clientId }}"
+            },
+            {
+              "name": "code",
+              "value": "={{ $json.code }}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "={{ $json.redirectUri }}"
+            },
+            {
+              "name": "scope",
+              "value": "openid profile email"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "cc9dde41-bbf3-4d63-9a8d-0319216c157e",
+      "name": "Canje · Extractor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        224
+      ],
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "GUd5z4JcQKk34DaQ",
+          "name": "Extractor · Secreto Entra ID"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.tokenUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "authorization_code"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $json.clientId }}"
+            },
+            {
+              "name": "code",
+              "value": "={{ $json.code }}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "={{ $json.redirectUri }}"
+            },
+            {
+              "name": "scope",
+              "value": "openid profile email"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "2773904c-8a9a-4e2b-a936-a1ede4483431",
+      "name": "Canje · Rindegastos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        384
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "Gve9QdSv7ABeiPLC",
+          "name": "Rindegastos · Secreto Entra ID (vence 2027-10-20)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Valida el id_token que entregó el endpoint de tokens de Microsoft y arma la sesión.\n// La firma RSA no se verifica: el token llega directo del endpoint por TLS y con autenticación de\n// cliente (OpenID Connect Core 1.0 §3.1.3.7, punto 6). Sí se validan todos los claims.\n// Los tokens de Microsoft no salen de este nodo.\nconst { cfg } = base;\nconst nonceEsperado = $('Callback: validar state').first().json.nonce;\nconst r = $input.first().json ?? {};\nconst fallo = (codigo, detalle = '') => [{ json: { continuar: false, codigo, detalle: String(detalle).slice(0, 400) } }];\n\n// ------------------------------------------------------------ respuesta del endpoint de tokens\nif (!r.id_token) {\n  const error = r.error;\n  const descripcion = String(r.error_description ?? '');\n  const aadsts = (descripcion.match(/AADSTS\\d+/) ?? [''])[0];\n  if (typeof error === 'string' && error) {\n    const detalle = `${error}${descripcion ? ' · ' + descripcion.replace(/\\s+/g, ' ').slice(0, 300) : ''}`;\n    if (error === 'invalid_client' || ['AADSTS7000215', 'AADSTS7000222', 'AADSTS7000216'].includes(aadsts)) {\n      return fallo('secreto_invalido', detalle);\n    }\n    if (error === 'invalid_grant') return fallo('codigo_vencido', detalle);\n    return fallo(aadsts || 'ms_error', detalle);\n  }\n  // Falla de red o del nodo HTTP (sigue por \"On Error: Continue\")\n  const texto = error && typeof error === 'object' ? (error.message ?? JSON.stringify(error)) : 'respuesta sin id_token';\n  return fallo('ms_sin_respuesta', texto);\n}\n\n// ------------------------------------------------------------ id_token (JWT)\nlet cabecera;\nlet datos;\ntry {\n  const partes = String(r.id_token).split('.');\n  if (partes.length !== 3) throw new Error('formato');\n  const leer = (parte) => JSON.parse(Buffer.from(parte, 'base64url').toString('utf8'));\n  cabecera = leer(partes[0]);\n  datos = leer(partes[1]);\n} catch (e) {\n  return fallo('id_token_invalido', 'el id_token no se pudo leer');\n}\n\nconst ahora = Math.floor(Date.now() / 1000);\nconst TOLERANCIA_RELOJ_S = 300;\nconst audiencias = Array.isArray(datos.aud) ? datos.aud : [datos.aud];\nconst emisor = `https://login.microsoftonline.com/${cfg.tenantId}/v2.0`;\nconst igual = (a, b) => String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();\n\nconst problemas = [];\nif (String(cabecera.alg ?? 'none').toLowerCase() === 'none') problemas.push('alg');\nif (!audiencias.includes(cfg.clientId)) problemas.push('aud');\nif (audiencias.length > 1 && datos.azp !== cfg.clientId) problemas.push('azp');\nif (!igual(datos.iss, emisor)) problemas.push('iss');\nif (!igual(datos.tid, cfg.tenantId)) problemas.push('tid');\nif (!(Number(datos.exp) > ahora - TOLERANCIA_RELOJ_S)) problemas.push('exp');\nif (datos.nbf != null && Number(datos.nbf) > ahora + TOLERANCIA_RELOJ_S) problemas.push('nbf');\nif (datos.iat != null && Number(datos.iat) > ahora + TOLERANCIA_RELOJ_S) problemas.push('iat');\nif (!nonceEsperado || datos.nonce !== nonceEsperado) problemas.push('nonce');\nif (problemas.length) {\n  return fallo(problemas.includes('tid') ? 'otro_directorio' : 'id_token_invalido', 'claims: ' + problemas.join(', '));\n}\n\nconst email = String(datos.preferred_username || datos.email || datos.upn || '').trim().toLowerCase();\nif (!cfg.dominiosPermitidos.some((d) => email.endsWith('@' + d.toLowerCase()))) {\n  return fallo('dominio_no_permitido', email || '(sin correo)');\n}\n\nreturn [{\n  json: {\n    continuar: true,\n    sesion: {\n      tipo: 'sesion',\n      app: base.app,\n      email,\n      nombre: String(datos.name ?? ''),\n      oid: String(datos.oid ?? ''),\n      iat: ahora,\n      exp: ahora + cfg.duracionSesionSegundos,\n    },\n  },\n}];\n"
+      },
+      "id": "012bdcf7-7a6c-44d6-8bc7-66cf697c67b9",
+      "name": "Callback: validar identidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "85c9614c-10d0-42bd-8f36-3619bc84f312",
+              "leftValue": "={{ $json.continuar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "3e06dc73-44a5-4d6a-9500-47ab61d72f4f",
+      "name": "¿Identidad válida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2928,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Registro de accesos: inicio de sesión exitoso (tabla \"auth_m365_registro_accesos\", retención 90 días).\nconst sesion = $('Callback: validar identidad').first().json.sesion;\nconst ahora = new Date();\nreturn [{\n  json: {\n    fecha: ahora.toISOString(), ts: ahora.getTime(), evento: 'inicio_sesion', app: base.app,\n    email: sesion.email, nombre: sesion.nombre,\n    detalle: `sesión ${base.cfg.modoSesion}, vence ${new Date(sesion.exp * 1000).toISOString()}`,\n  },\n}];\n"
+      },
+      "id": "a0ff45c3-941b-466c-b81b-04c089e4f80d",
+      "name": "Registro: preparar inicio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "TCWhmYKDNfk2mZOC",
+          "cachedResultName": "auth_m365_registro_accesos",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/TCWhmYKDNfk2mZOC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha": "={{ $json.fecha }}",
+            "evento": "={{ $json.evento }}",
+            "app": "={{ $json.app }}",
+            "email": "={{ $json.email }}",
+            "nombre": "={{ $json.nombre }}",
+            "detalle": "={{ $json.detalle }}",
+            "ts": "={{ $json.ts }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "evento",
+              "displayName": "evento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "detalle",
+              "displayName": "detalle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ts",
+              "displayName": "ts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a8af35e7-8f45-453b-9762-b9d3ee3216b2",
+      "name": "Registro: guardar inicio",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 2,
+        "output": "={{ $('Registro de aplicaciones').first().json.cfg.modoSesion === 'tabla' ? 1 : 0 }}"
+      },
+      "id": "d1761983-0065-4b9e-9034-6bf1e6b68bff",
+      "name": "Callback: modo",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3584,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "useJson": true,
+        "claimsJson": "={{ JSON.stringify($('Callback: validar identidad').first().json.sesion) }}",
+        "options": {}
+      },
+      "id": "d8e8cbdf-6f9d-4745-9040-3802e92ccc6a",
+      "name": "Callback: firmar sesión",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "position": [
+        3808,
+        80
+      ],
+      "credentials": {
+        "jwtAuth": {
+          "id": "Uodv7hjzuljIrXNa",
+          "name": "Auth M365 · Firma de sesiones"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\nconst { cfg } = base;\nconst sesion = $('Callback: validar identidad').first().json.sesion;\nconst token = String($input.first().json.token ?? '');\nif (!token) throw new Error('No se pudo firmar la sesión: revise la credencial de \"Callback: firmar sesión\".');\n\nreturn [{\n  json: {\n    ok: true,\n    operacion: 'procesarCallback',\n    app: base.app,\n    usuario: { email: sesion.email, nombre: sesion.nombre, oid: sesion.oid },\n    tokenSesion: token,\n    venceSesion: sesion.exp,\n    urlDestino: cfg.urlDestino,\n    setCookie: `${cfg.cookieSesion}=${token}; Path=${cfg.rutaCookie}; Max-Age=${cfg.duracionSesionSegundos}; HttpOnly; Secure; SameSite=Lax`,\n    campoOculto: `<input type=\"hidden\" name=\"${cfg.campoSesion}\" value=\"${token}\">`,\n  },\n}];\n"
+      },
+      "id": "1f68fe48-b4a1-485e-a556-674ca1c32359",
+      "name": "Callback: resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "action": "generate",
+        "dataPropertyName": "sesionId",
+        "encodingType": "hex",
+        "stringLength": 64
+      },
+      "id": "4d396180-cfa2-40ad-80cf-efffa0d7ea3b",
+      "name": "Callback: generar id de sesión",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Modo 'tabla': fila de \"auth_m365_sesiones\" (sesiones activas) con el id aleatorio del nodo Crypto.\nconst sesion = $('Callback: validar identidad').first().json.sesion;\nconst id = String($input.first().json.sesionId ?? '');\nif (!/^[0-9a-f]{64}$/.test(id)) throw new Error('id de sesión sin el formato esperado: revise \"Callback: generar id de sesión\".');\nreturn [{\n  json: {\n    sesion: id, app: base.app, email: sesion.email, nombre: sesion.nombre, oid: sesion.oid,\n    inicio: new Date(sesion.iat * 1000).toISOString(), expira: sesion.exp * 1000,\n  },\n}];\n"
+      },
+      "id": "2fdd2d82-2e65-4382-bf85-35aef06326c7",
+      "name": "Callback: preparar sesión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "AVObiNx5VmIVXtZq",
+          "cachedResultName": "auth_m365_sesiones",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/AVObiNx5VmIVXtZq"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sesion": "={{ $json.sesion }}",
+            "app": "={{ $json.app }}",
+            "email": "={{ $json.email }}",
+            "nombre": "={{ $json.nombre }}",
+            "oid": "={{ $json.oid }}",
+            "inicio": "={{ $json.inicio }}",
+            "expira": "={{ $json.expira }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sesion",
+              "displayName": "sesion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "oid",
+              "displayName": "oid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "inicio",
+              "displayName": "inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "expira",
+              "displayName": "expira",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "72306814-8f72-42e5-bb16-f053c58fb23e",
+      "name": "Callback: guardar sesión",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4240,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "AVObiNx5VmIVXtZq",
+          "cachedResultName": "auth_m365_sesiones",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/AVObiNx5VmIVXtZq"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "expira",
+              "condition": "lt",
+              "keyValue": "={{ $now.toMillis() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5f16bca-18a3-4eb3-8d93-db815902c14a",
+      "name": "Callback: limpiar sesiones vencidas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        4464,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Modo 'tabla': el flujo de acceso redirige a urlDestino.\n//   App con cookie (cookieSesion): la sesión va en Set-Cookie.\n//   App con Form de n8n: la sesión va en ?sesion=<id> (el Form la toma en su campo oculto \"sesion\");\n//   setCookie solo borra la cookie de nonce, que ya no se necesita.\nconst { cfg } = base;\nconst fila = $('Callback: preparar sesión').first().json;\nconst conCookie = Boolean(cfg.cookieSesion);\nconst sep = String(cfg.urlDestino).includes('?') ? '&' : '?';\nreturn [{\n  json: {\n    ok: true,\n    operacion: 'procesarCallback',\n    app: base.app,\n    usuario: { email: fila.email, nombre: fila.nombre, oid: fila.oid },\n    sesionId: fila.sesion,\n    venceSesion: Math.floor(fila.expira / 1000),\n    urlDestino: conCookie ? cfg.urlDestino : `${cfg.urlDestino}${sep}sesion=${fila.sesion}`,\n    setCookie: conCookie\n      ? `${cfg.cookieSesion}=${fila.sesion}; Path=${cfg.rutaCookie}; Max-Age=${cfg.duracionSesionSegundos}; HttpOnly; Secure; SameSite=Lax`\n      : `${cfg.cookieNonce}=; Path=/webhook; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,\n  },\n}];\n"
+      },
+      "id": "33451392-85ee-4cc5-ac3f-c988aad6da87",
+      "name": "Callback: resultado (tabla)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4688,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Modo 'jwt': la sesión llega en el campo oculto del formulario (tokenSesion) o en la cookie de la app.\n//   n8n Cloud sirve las páginas con CSP sandbox: los POST de formularios llegan SIN cookies,\n//   por eso el campo oculto tiene prioridad; la cookie solo sirve en peticiones GET.\n// Modo 'tabla': la sesión es un id aleatorio; llega en tokenSesion o en la cookie de la app (si tiene).\n// Salida \"modo\" = salida de \"Sesión: modo\" (0 jwt, 1 tabla).\nconst { cfg } = base;\nconst tabla = cfg.modoSesion === 'tabla';\nconst deCookie = String((cfg.cookieSesion && base.cookies[cfg.cookieSesion]) ?? '');\nconst token = tabla ? (base.tokenSesion || deCookie).toLowerCase() : base.tokenSesion || deCookie;\nif (!token) return [{ json: { continuar: false, codigo: 'sin_sesion', detalle: '' } }];\nconst formato = tabla ? /^[0-9a-f]{64}$/ : /^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/;\nif (!formato.test(token)) {\n  return [{ json: { continuar: false, codigo: 'sesion_invalida', detalle: 'formato' } }];\n}\nreturn [{ json: { continuar: true, token, modo: tabla ? 1 : 0 } }];\n"
+      },
+      "id": "9189e06e-e037-4f57-b769-aa8da218fde9",
+      "name": "Sesión: preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1b124d21-e12d-4d09-b793-1653d063ddac",
+              "leftValue": "={{ $json.continuar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "8792541d-0b14-4a6c-bdd5-5ac21a0cea3f",
+      "name": "¿Hay sesión?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 2,
+        "output": "={{ $json.modo }}"
+      },
+      "id": "3458dae1-0fe6-4aad-86c0-bc18fb881e4b",
+      "name": "Sesión: modo",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1168,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "verify",
+        "token": "={{ $json.token }}",
+        "options": {}
+      },
+      "id": "128668bc-8d44-4aa7-9096-563acd1c07f6",
+      "name": "Sesión: verificar firma",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        720
+      ],
+      "credentials": {
+        "jwtAuth": {
+          "id": "Uodv7hjzuljIrXNa",
+          "name": "Auth M365 · Firma de sesiones"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\nconst { cfg } = base;\nconst p = $input.first().json.payload ?? {};\nconst token = $('Sesión: preparar').first().json.token;\nconst ahora = Math.floor(Date.now() / 1000);\nconst email = String(p.email ?? '').toLowerCase();\n\nlet codigo = '';\nif (p.tipo !== 'sesion') codigo = 'sesion_invalida';\nelse if (p.app !== base.app) codigo = 'sesion_otra_app';\nelse if (!(Number(p.exp) > ahora)) codigo = 'sesion_vencida';\nelse if (!cfg.dominiosPermitidos.some((d) => email.endsWith('@' + d.toLowerCase()))) codigo = 'dominio_no_permitido';\nif (codigo) return [{ json: { continuar: false, codigo, detalle: '' } }];\n\nreturn [{\n  json: {\n    continuar: true,\n    usuario: { email, nombre: String(p.nombre ?? ''), oid: String(p.oid ?? '') },\n    tokenSesion: token,\n    venceSesion: Number(p.exp),\n    campoOculto: `<input type=\"hidden\" name=\"${cfg.campoSesion}\" value=\"${token}\">`,\n  },\n}];\n"
+      },
+      "id": "e7a3f5ed-594f-4e31-b7a5-a3f32578ad33",
+      "name": "Sesión: validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Salida de error de \"Sesión: verificar firma\": firma alterada, otra llave o token vencido.\nconst error = $input.first().json.error;\nconst mensaje = String((error && (error.message ?? error)) || $input.first().json.message || '');\nreturn [{\n  json: {\n    continuar: false,\n    codigo: /expired/i.test(mensaje) ? 'sesion_vencida' : 'sesion_invalida',\n    detalle: mensaje.slice(0, 200),\n  },\n}];\n"
+      },
+      "id": "963ad602-5b3e-424d-9257-bcd9c946ae96",
+      "name": "Sesión: firma rechazada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "AVObiNx5VmIVXtZq",
+          "cachedResultName": "auth_m365_sesiones",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/AVObiNx5VmIVXtZq"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sesion",
+              "keyValue": "={{ $json.token }}"
+            },
+            {
+              "keyName": "app",
+              "keyValue": "={{ $('Registro de aplicaciones').first().json.app }}"
+            }
+          ]
+        },
+        "limit": 5
+      },
+      "id": "8323001b-4753-499c-a0b7-bdde30e42db0",
+      "name": "Sesión: buscar en tabla",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        1392,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Modo 'tabla': la sesión debe existir, ser de esta app, no haber vencido y ser de un dominio permitido.\nconst { cfg } = base;\nconst token = $('Sesión: preparar').first().json.token;\nconst fila = $input.all()\n  .map((item) => item.json ?? {})\n  .find((f) => String(f.sesion ?? '').toLowerCase() === token);\nconst email = String(fila?.email ?? '').toLowerCase();\n\nlet codigo = '';\nif (!fila) codigo = 'sesion_invalida';\nelse if (fila.app !== base.app) codigo = 'sesion_otra_app';\nelse if (!(Number(fila.expira) > Date.now())) codigo = 'sesion_vencida';\nelse if (!cfg.dominiosPermitidos.some((d) => email.endsWith('@' + d.toLowerCase()))) codigo = 'dominio_no_permitido';\nif (codigo) return [{ json: { continuar: false, codigo, detalle: '' } }];\n\nreturn [{\n  json: {\n    continuar: true,\n    usuario: { email, nombre: String(fila.nombre ?? ''), oid: String(fila.oid ?? '') },\n    sesionId: token,\n    tokenSesion: token,\n    venceSesion: Math.floor(Number(fila.expira) / 1000),\n    // Los POST de formularios llegan sin cookies (sandbox de n8n): la sesión viaja en este campo oculto\n    campoOculto: `<input type=\"hidden\" name=\"${cfg.campoSesion || '_sesion'}\" value=\"${token}\">`,\n  },\n}];\n"
+      },
+      "id": "0ef04418-c5ce-4665-84e1-20d4baf80917",
+      "name": "Sesión: validar fila",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bbebc2db-24e5-4d52-9abc-fd2299c1018e",
+              "leftValue": "={{ $json.continuar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "769c3217-547b-4b31-bb64-5133d98784e0",
+      "name": "¿Sesión válida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\nconst { continuar, ...sesion } = $input.first().json;\nreturn [{ json: { ok: true, operacion: 'verificarSesion', app: base.app, ...sesion } }];\n"
+      },
+      "id": "23c865a7-772c-43d2-938c-48348bf68230",
+      "name": "Sesión: resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Identifica la sesión que se cierra: tokenSesion o cookie de la app.\n// Salida \"modo\" = salida de \"Cierre: modo\" (0 jwt, 1 tabla). En jwt el usuario se lee del token (sin\n// verificar la firma: solo se usa para el registro de accesos).\nconst { cfg } = base;\nconst tabla = cfg.modoSesion === 'tabla';\nconst token = String(base.tokenSesion || (cfg.cookieSesion && base.cookies[cfg.cookieSesion]) || '').trim();\nlet email = '';\nlet nombre = '';\nif (!tabla && token.split('.').length === 3) {\n  try {\n    const p = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));\n    if (p.app === base.app) { email = String(p.email ?? ''); nombre = String(p.nombre ?? ''); }\n  } catch (e) {\n    // token ilegible: se registra sin usuario\n  }\n}\nreturn [{ json: { modo: tabla ? 1 : 0, token: tabla ? token.toLowerCase() : token, email, nombre } }];\n"
+      },
+      "id": "9c692f65-0991-41e6-98cc-cf4802262ea6",
+      "name": "Cierre: preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 2,
+        "output": "={{ $json.modo }}"
+      },
+      "id": "f16f6be1-c4d8-452e-a20b-1722f4ee230b",
+      "name": "Cierre: modo",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        944,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "AVObiNx5VmIVXtZq",
+          "cachedResultName": "auth_m365_sesiones",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/AVObiNx5VmIVXtZq"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sesion",
+              "keyValue": "={{ $('Cierre: preparar').first().json.token || '-' }}"
+            },
+            {
+              "keyName": "app",
+              "keyValue": "={{ $('Registro de aplicaciones').first().json.app }}"
+            }
+          ]
+        },
+        "limit": 5
+      },
+      "id": "8d5f9f9c-9acd-4048-b27c-20debe5ceb01",
+      "name": "Cierre: buscar sesión",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        1168,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "AVObiNx5VmIVXtZq",
+          "cachedResultName": "auth_m365_sesiones",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/AVObiNx5VmIVXtZq"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sesion",
+              "keyValue": "={{ $('Cierre: preparar').first().json.token || '-' }}"
+            },
+            {
+              "keyName": "app",
+              "keyValue": "={{ $('Registro de aplicaciones').first().json.app }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2975db63-b72e-45e2-94f1-81cc237c2dc9",
+      "name": "Cierre: borrar sesión",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        1392,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Registro de accesos: cierre de sesión.\nconst prep = $('Cierre: preparar').first().json;\nlet { email, nombre } = prep;\nlet detalle = '';\nif (prep.modo === 1) {\n  let filas = [];\n  try { filas = $('Cierre: buscar sesión').all().map((i) => i.json ?? {}); } catch (e) { filas = []; }\n  const fila = filas.find((f) => f.sesion);\n  if (fila) { email = fila.email; nombre = fila.nombre; detalle = 'sesión anulada en el servidor'; }\n  else detalle = 'no había una sesión activa';\n} else {\n  detalle = 'cookie borrada (sesión jwt)';\n}\nconst ahora = new Date();\nreturn [{\n  json: { fecha: ahora.toISOString(), ts: ahora.getTime(), evento: 'cierre_sesion', app: base.app, email: email || '', nombre: nombre || '', detalle },\n}];\n"
+      },
+      "id": "99c73a00-8a69-4e8a-8d3e-9c4d527707ae",
+      "name": "Registro: preparar cierre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "TCWhmYKDNfk2mZOC",
+          "cachedResultName": "auth_m365_registro_accesos",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/TCWhmYKDNfk2mZOC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha": "={{ $json.fecha }}",
+            "evento": "={{ $json.evento }}",
+            "app": "={{ $json.app }}",
+            "email": "={{ $json.email }}",
+            "nombre": "={{ $json.nombre }}",
+            "detalle": "={{ $json.detalle }}",
+            "ts": "={{ $json.ts }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "evento",
+              "displayName": "evento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "detalle",
+              "displayName": "detalle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ts",
+              "displayName": "ts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "33083975-a3f2-480c-b201-1bebb5aa0c12",
+      "name": "Registro: guardar cierre",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Modo 'jwt': la sesión no se puede revocar en el servidor. Cerrar sesión = borrar la cookie;\n//   el flujo que llama debe además dejar de enviar el campo oculto.\n// Modo 'tabla': \"Cierre: borrar sesión\" ya eliminó la fila: el id deja de servir.\nconst { cfg } = base;\nreturn [{\n  json: {\n    ok: true,\n    operacion: 'cerrarSesion',\n    app: base.app,\n    // Siempre una cabecera válida: la cookie de sesión de la app o, si no tiene, la de nonce\n    setCookie: cfg.cookieSesion\n      ? `${cfg.cookieSesion}=; Path=${cfg.rutaCookie}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`\n      : `${cfg.cookieNonce}=; Path=/webhook; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,\n  },\n}];\n"
+      },
+      "id": "fccd31f9-7e2d-4363-a8bd-4582d3a80a95",
+      "name": "Cierre: resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Registro de aplicaciones').first().json;\n// Único lugar con los mensajes de error que ve el usuario.\n// accion: qué debe hacer el flujo que llama → 'login' (enviar al login), 'reintentar' (página con\n// botón para volver a ingresar) o 'contactar_ti' (página de error sin reintento automático).\n// titulo/mensaje/consejos/detalle van en texto plano: escaparlos al mostrarlos, o usar \"html\" (ya escapado).\nconst { codigo = 'error_desconocido', detalle = '' } = $input.first().json;\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\n\nconst PARA_TI = ['Avise a TI con el detalle técnico que aparece abajo.'];\nconst VOLVER = ['Vuelva a ingresar desde el enlace del formulario.'];\nconst MENSAJES = {\n  // Configuración del flujo que llama\n  app_desconocida: { accion: 'contactar_ti', titulo: 'Aplicación no registrada', mensaje: 'Este flujo no está registrado en el subflujo de autenticación.', consejos: PARA_TI },\n  operacion_desconocida: { accion: 'contactar_ti', titulo: 'Operación no válida', mensaje: 'El flujo pidió una operación de autenticación que no existe.', consejos: PARA_TI },\n  redirect_no_permitida: { accion: 'contactar_ti', titulo: 'Dirección de retorno no permitida', mensaje: 'La dirección de regreso del flujo no está registrada para esta aplicación.', consejos: PARA_TI },\n  // Errores que informa Microsoft (https://learn.microsoft.com/entra/identity-platform/reference-error-codes)\n  access_denied: { accion: 'reintentar', titulo: 'Se canceló el inicio de sesión', mensaje: 'Microsoft no completó el ingreso.', consejos: ['Vuelva a intentar. Si el problema sigue, avise a TI.'] },\n  AADSTS65004: { accion: 'reintentar', titulo: 'Se canceló el inicio de sesión', mensaje: 'No se aceptaron los permisos que solicita la aplicación.', consejos: ['Vuelva a intentar y acepte el permiso de iniciar sesión y leer su perfil.'] },\n  AADSTS50105: { accion: 'contactar_ti', titulo: 'Su cuenta no tiene acceso a esta aplicación', mensaje: 'Microsoft confirmó su identidad, pero su usuario no está habilitado para esta aplicación.', consejos: ['Solicite a Infraestructura que lo agregue al grupo autorizado de la aplicación.'] },\n  AADSTS50020: { accion: 'reintentar', titulo: 'Debe ingresar con su cuenta corporativa de UNI2', mensaje: 'La cuenta con la que ingresó pertenece a otra organización o es una cuenta personal.', consejos: ['Cierre la sesión de esa cuenta en Microsoft e ingrese con su correo corporativo.'] },\n  AADSTS50034: { accion: 'reintentar', titulo: 'Debe ingresar con su cuenta corporativa de UNI2', mensaje: 'Esa cuenta no existe en el directorio de UNI2.', consejos: ['Revise que escribió bien su correo corporativo.'] },\n  AADSTS700016: { accion: 'contactar_ti', titulo: 'La aplicación no está registrada', mensaje: 'Microsoft no reconoce el Id. de aplicación (client id) configurado.', consejos: PARA_TI },\n  AADSTS90002: { accion: 'contactar_ti', titulo: 'El directorio no existe', mensaje: 'Microsoft no reconoce el Id. de directorio (tenant) configurado.', consejos: PARA_TI },\n  AADSTS50011: { accion: 'contactar_ti', titulo: 'La dirección de retorno no coincide', mensaje: 'La dirección de regreso del flujo no es la registrada en Entra ID.', consejos: PARA_TI },\n  ms_error: { accion: 'reintentar', titulo: 'Microsoft no completó el inicio de sesión', mensaje: 'Ocurrió un problema al validar su cuenta.', consejos: ['Vuelva a intentar en unos minutos. Si el problema sigue, avise a TI.'] },\n  respuesta_incompleta: { accion: 'reintentar', titulo: 'El inicio de sesión llegó incompleto', mensaje: 'La respuesta de Microsoft no trae los datos esperados.', consejos: VOLVER },\n  // state (protección CSRF)\n  state_invalido: { accion: 'reintentar', titulo: 'El inicio de sesión no es válido', mensaje: 'El enlace de regreso desde Microsoft no corresponde a un inicio de sesión de este flujo.', consejos: VOLVER },\n  state_inexistente: { accion: 'reintentar', titulo: 'El inicio de sesión ya se usó', mensaje: 'Este enlace de regreso ya se usó o no corresponde a un inicio de sesión de este flujo.', consejos: VOLVER },\n  state_vencido: { accion: 'reintentar', titulo: 'El inicio de sesión venció', mensaje: 'Pasaron más de 10 minutos entre el inicio y el regreso desde Microsoft.', consejos: VOLVER },\n  state_otra_app: { accion: 'reintentar', titulo: 'El inicio de sesión no corresponde a esta aplicación', mensaje: 'El regreso desde Microsoft pertenece a otro flujo.', consejos: VOLVER },\n  navegador_distinto: { accion: 'reintentar', titulo: 'El inicio de sesión no corresponde a este navegador', mensaje: 'El regreso desde Microsoft se abrió en un navegador distinto al que inició el ingreso.', consejos: ['Vuelva a ingresar desde este navegador.'] },\n  // Canje del código\n  secreto_invalido: { accion: 'contactar_ti', titulo: 'El acceso con Microsoft 365 necesita mantenimiento', mensaje: 'El secreto de la aplicación en n8n no es válido o ya venció.', consejos: ['Avise a TI: debe renovar el secreto de cliente en Entra ID y actualizar la credencial del nodo de canje.'] },\n  codigo_vencido: { accion: 'reintentar', titulo: 'El inicio de sesión venció', mensaje: 'El código que entregó Microsoft ya se usó o venció.', consejos: VOLVER },\n  ms_sin_respuesta: { accion: 'reintentar', titulo: 'No se pudo comunicar con Microsoft', mensaje: 'El servicio de inicio de sesión no respondió como se esperaba.', consejos: ['Vuelva a intentar en unos minutos. Si el problema sigue, avise a TI.'] },\n  // Identidad\n  id_token_invalido: { accion: 'contactar_ti', titulo: 'No se pudo confirmar su identidad', mensaje: 'La respuesta de Microsoft no pasó las validaciones de seguridad.', consejos: PARA_TI },\n  otro_directorio: { accion: 'reintentar', titulo: 'Debe ingresar con su cuenta corporativa de UNI2', mensaje: 'La cuenta no pertenece al directorio de UNI2.', consejos: ['Cierre la sesión de esa cuenta en Microsoft e ingrese con su correo corporativo.'] },\n  dominio_no_permitido: { accion: 'contactar_ti', titulo: 'Cuenta no permitida', mensaje: 'La cuenta no es de un dominio permitido para esta aplicación.', consejos: PARA_TI },\n  // Sesión\n  sin_sesion: { accion: 'login', titulo: 'Debe iniciar sesión', mensaje: 'Ingrese con su cuenta de Microsoft 365 para continuar.', consejos: [] },\n  sesion_invalida: { accion: 'login', titulo: 'La sesión no es válida', mensaje: 'Vuelva a iniciar sesión con su cuenta de Microsoft 365.', consejos: [] },\n  sesion_vencida: { accion: 'login', titulo: 'La sesión venció', mensaje: 'Vuelva a iniciar sesión con su cuenta de Microsoft 365.', consejos: [] },\n  sesion_otra_app: { accion: 'login', titulo: 'La sesión no corresponde a esta aplicación', mensaje: 'Vuelva a iniciar sesión con su cuenta de Microsoft 365.', consejos: [] },\n};\nconst caso = Object.prototype.hasOwnProperty.call(MENSAJES, codigo)\n  ? MENSAJES[codigo]\n  : { accion: 'reintentar', titulo: 'No se pudo completar el inicio de sesión', mensaje: 'Ocurrió un problema inesperado.', consejos: ['Vuelva a intentar. Si el problema sigue, avise a TI.'] };\n\nconst detalleTecnico = [codigo, detalle].filter(Boolean).join(' · ');\nconst html = `<h1>${esc(caso.titulo)}</h1><p>${esc(caso.mensaje)}</p>`\n  + (caso.consejos.length ? `<ul class=\"consejos\">${caso.consejos.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '')\n  + `<p class=\"detalle-tecnico\">${esc(detalleTecnico)}</p>`;\n\nreturn [{\n  json: {\n    ok: false,\n    operacion: base.operacion,\n    app: base.app,\n    codigo,\n    accion: caso.accion,\n    titulo: caso.titulo,\n    mensaje: caso.mensaje,\n    consejos: caso.consejos,\n    detalle: detalleTecnico,\n    html,\n  },\n}];\n"
+      },
+      "id": "6d745273-f402-4a71-87ba-50b745628e18",
+      "name": "Error: describir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "14f3d248-eca5-4804-9bfd-ee61aaa4e40b",
+      "name": "Limpieza diaria",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "AVObiNx5VmIVXtZq",
+          "cachedResultName": "auth_m365_sesiones",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/AVObiNx5VmIVXtZq"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "expira",
+              "condition": "lt",
+              "keyValue": "={{ $now.toMillis() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "54da57ee-64ad-4c68-ac10-38017f3e51d2",
+      "name": "Limpieza: sesiones vencidas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        224,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "U4XPOwosUHbmvNuI",
+          "cachedResultName": "auth_m365_inicios",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/U4XPOwosUHbmvNuI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "expira",
+              "condition": "lt",
+              "keyValue": "={{ $now.toMillis() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ce5230a2-9159-4fd7-99b4-e360c47f45ed",
+      "name": "Limpieza: inicios vencidos",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        448,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "TCWhmYKDNfk2mZOC",
+          "cachedResultName": "auth_m365_registro_accesos",
+          "cachedResultUrl": "/projects/8cm3t3EpvqIU0Vff/datatables/TCWhmYKDNfk2mZOC"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "ts",
+              "condition": "lt",
+              "keyValue": "={{ $now.minus({ days: 90 }).toMillis() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ab1a0eff-69e7-4643-9a59-4a19dad7792e",
+      "name": "Limpieza: registro antiguo",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        672,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔐 Acceso Microsoft 365 · login genérico (issue #389)\nPuerta de entrada para **todos** los flujos que piden login con Microsoft 365.\n\n**Enlace:** `/webhook/acceso-m365?app=<app>` → Microsoft → regreso → la app (`urlDestino` del registro).\n- **App con Form** (p. ej. `rindegastos`): llega a su Form con `?sesion=<id>`. La sesión queda en la tabla general **auth_m365_sesiones**.\n- **App con webhook**: llega a su página con la sesión en cookie.\n\n**Cerrar sesión:** `/webhook/acceso-m365?app=<app>&salir=1&sesion=<id>`.\n\n**En cada flujo solo se agrega:** *Auth: verificar sesión* (Execute Workflow → subflujo, operación `verificarSesion`) + IF.\nTodo lo demás (client id, secretos, destino, validaciones) vive en el subflujo **Auth · Microsoft 365** → *Registro de aplicaciones*.",
+        "height": 1300,
+        "width": 1880,
+        "color": 6
+      },
+      "id": "d336cd92-12dd-4665-9920-01b6330b71b2",
+      "name": "Nota · Acceso Microsoft 365",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -3264
+      ]
+    },
+    {
+      "parameters": {
+        "path": "acceso-m365",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6ec18129-c984-46b8-b4a9-112a2c21be21",
+      "name": "Webhook Ingresar",
+      "webhookId": "0fbe066e-b4e5-40ba-adaf-0e71f7556167",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -2800
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "path": "rindegastos-sap-auth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "70aec572-9bd2-4a69-8369-590ac3babb69",
+      "name": "Webhook Regreso · rindegastos",
+      "webhookId": "fba7432f-c7e5-466d-ac3e-1b3a43f8bfd9",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -2544
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// ACCESO MICROSOFT 365 · puerta de entrada genérica (issue #389)\n// ------------------------------------------------------------\n// Ingreso:  /webhook/acceso-m365?app=<app>      Cierre: /webhook/acceso-m365?app=<app>&salir=1[&sesion=<id>]\n// Los datos de cada app (client id, destino tras el login, modo de sesión, dominios) están en el\n// subflujo \"Auth · Microsoft 365\", nodo \"Registro de aplicaciones\".\n// Aquí solo se lista qué webhook de regreso (redirect URI registrada en Entra ID) corresponde a cada app.\n// Para agregar una app: entrada en REGRESOS + webhook de regreso con esa ruta conectado a \"Config acceso\".\n// ============================================================\nconst INGRESO = 'acceso-m365';\nconst REGRESOS = {\"rindegastos-sap-auth\": \"rindegastos\"};\n\nconst entrada = $input.first().json;\nconst url = String(entrada.webhookUrl || '').split('?')[0].replace(/\\/$/, '');\nconst i = url.indexOf('/webhook/');\nconst instancia = i >= 0 ? url.slice(0, i) : '';\nconst ruta = i >= 0 ? url.slice(i + '/webhook/'.length) : '';\nconst q = entrada.query || {};\n\nconst esRegreso = Object.prototype.hasOwnProperty.call(REGRESOS, ruta);\nconst app = esRegreso ? REGRESOS[ruta] : String(q.app || '').trim().toLowerCase();\nconst regreso = Object.keys(REGRESOS).find((r) => REGRESOS[r] === app);\n\n// Salidas de \"Acceso: ruta\": 0 ingresar, 1 cerrar sesión, 2 regreso desde Microsoft\nconst salida = esRegreso ? 2 : (q.salir ? 1 : 0);\n\nreturn [{\n  json: {\n    ...entrada,\n    acceso: {\n      salida,\n      app,\n      sesion: String(q.sesion || '').trim(),\n      redirectUri: regreso ? `${instancia}/webhook/${regreso}` : '',\n      urls: { ingresar: `${instancia}/webhook/${INGRESO}?app=${encodeURIComponent(app)}` },\n    },\n  },\n  pairedItem: { item: 0 },\n}];\n"
+      },
+      "id": "82c7ddd2-c10b-4645-9b61-4d9f16ddbddd",
+      "name": "Config acceso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -2656
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// <ui-estandar> Interfaz estándar de los formularios n8n de UNI2 (issue #389).\n// Fuente única: n8n_ui/ui_estandar.js. Los scripts build_*.py la copian en el nodo \"UI estándar\"\n// de cada flujo: no editar a mano dentro de n8n.\n// Patrones de marca tomados de Reconstruye y del Extractor: naranja UNI2, Nunito, barra con el logo\n// de Finamiga, tarjeta centrada, botones redondeados y pantalla \"Procesando…\".\n// Seguridad: todo texto dinámico pasa por esc(); los formularios llevan el campo oculto de sesión.\n\nconst UI_ESTILOS = `<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link href=\"https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap\" rel=\"stylesheet\">\n<style>\n:root{--naranja:#f08a24;--naranja-osc:#d97316;--naranja-suave:rgba(240,138,36,.14);--texto:#3b3b3b;--texto-suave:#6e6e6e;--borde:#cfd2d6;--linea:#ececec;--fondo:#f4f5f7;--blanco:#fff;--error:#e5484d;--exito:#2f9e62;}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}\nhtml{-webkit-text-size-adjust:100%;}\nbody{min-height:100vh;display:flex;flex-direction:column;background:var(--fondo);font-family:'Nunito','Open Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;color:var(--texto);}\n.env-banner{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 12px;padding:10px 16px;background:var(--naranja);color:#1f1f1f;font-size:13px;font-weight:800;letter-spacing:.4px;text-align:center;}\n.env-banner .sep{opacity:.55;}\n.env-banner .usuario{font-weight:700;}\n.env-banner a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;}\n.navbar{background:var(--blanco);box-shadow:0 1px 6px rgba(0,0,0,.07);padding:14px 16px;display:flex;justify-content:center;}\n.navbar img{height:44px;display:block;}\n.container{width:100%;max-width:480px;margin:auto;padding:32px 16px;}\n.container.ancho{max-width:760px;}\n.card{background:var(--blanco);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.06);padding:32px 28px;}\n.card h1{font-size:22px;font-weight:700;color:var(--texto);text-align:center;margin-bottom:6px;}\n.card p{color:var(--texto-suave);line-height:1.6;text-align:center;}\n.card p.descripcion{margin-bottom:6px;}\nform{display:flex;flex-direction:column;}\nlabel{align-self:flex-start;position:relative;z-index:1;top:9px;margin:14px 0 0 12px;padding:0 6px;background:var(--blanco);font-size:13px;font-weight:600;color:var(--texto-suave);}\ninput,select,textarea{width:100%;height:50px;border:1px solid var(--borde);border-radius:6px;padding:0 14px;font:inherit;color:var(--texto);background-color:var(--blanco);transition:border-color .15s,box-shadow .15s;}\ntextarea{height:110px;padding:14px;resize:vertical;}\ninput[type=file]{height:auto;padding:12px 14px;}\nselect{appearance:none;-webkit-appearance:none;padding-right:42px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e6e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 16px center;}\ninput:focus,select:focus,textarea:focus{outline:none;border-color:var(--naranja);box-shadow:0 0 0 3px var(--naranja-suave);}\n.hint{font-size:12px;color:var(--texto-suave);margin:6px 2px 0;text-align:left!important;}\nbutton{margin-top:28px;height:48px;border:none;border-radius:24px;background:var(--naranja);color:#fff;font:inherit;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s,transform .05s;}\nbutton:hover{background:var(--naranja-osc);}\nbutton:active{transform:translateY(1px);}\nbutton:disabled{opacity:.65;cursor:not-allowed;}\n.btn{display:block;margin-top:24px;height:48px;line-height:48px;border-radius:24px;background:var(--naranja);color:#fff;text-align:center;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:background .15s;}\n.btn:hover{background:var(--naranja-osc);}\n.btn-back{display:block;margin-top:12px;height:48px;line-height:46px;border:1.5px solid var(--naranja);border-radius:24px;color:var(--naranja);background:transparent;text-align:center;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:background .15s;}\n.btn-back:hover{background:var(--naranja-suave);}\n.status-icon{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;color:#fff;}\n.status-icon.exito{background:var(--exito);}\n.status-icon.error{background:var(--error);}\n.status-icon.aviso{background:var(--naranja);}\n.mensaje{background:var(--fondo);border-radius:8px;padding:14px 16px;margin-top:16px;font-size:14px;line-height:1.7;text-align:left!important;word-break:break-word;color:var(--texto)!important;}\n.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:girar .8s linear infinite;vertical-align:-3px;margin-right:8px;}\n@keyframes girar{to{transform:rotate(360deg);} }\n.overlay{position:fixed;inset:0;background:rgba(244,245,247,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;font-weight:700;color:var(--texto);}\n.overlay.show{display:flex;}\n.overlay .spinner{width:38px;height:38px;border-width:3px;border-color:var(--naranja-suave);border-top-color:var(--naranja);margin:0;}\n.alerta{border-radius:8px;padding:12px 14px;margin:16px 0 4px;font-size:14px;line-height:1.5;text-align:left;}\n.alerta.error{background:rgba(229,72,77,.10);border:1px solid rgba(229,72,77,.35);color:#b42318;}\n.res-contadores{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 12px;}\n.chip{border-radius:10px;padding:12px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--texto-suave);background:var(--fondo);border:1px solid var(--linea);}\n.chip b{display:block;font-size:24px;line-height:1.1;font-weight:800;}\n.chip.ok b{color:var(--exito);}.chip.mal b{color:var(--error);}.chip.neutro b{color:var(--texto-suave);}\n.chip.ok.activo{background:rgba(47,158,98,.08);border-color:rgba(47,158,98,.35);}\n.chip.mal.activo{background:rgba(229,72,77,.08);border-color:rgba(229,72,77,.35);}\n.res-integracion{border-radius:8px;padding:10px 14px;font-size:14px;text-align:center;margin-bottom:6px;}\n.res-integracion.ok{background:rgba(47,158,98,.10);color:#1e7a4a;}\n.res-integracion.mal{background:rgba(229,72,77,.10);color:#b42318;}\n.res-seccion{margin-top:16px;border:1px solid var(--linea);border-left:4px solid var(--borde);border-radius:8px;padding:12px 14px;text-align:left;}\n.res-seccion.ok{border-left-color:var(--exito);}.res-seccion.mal{border-left-color:var(--error);}.res-seccion.neutro{border-left-color:#9aa0a6;}\n.res-seccion h3{font-size:14px;font-weight:800;color:var(--texto);margin-bottom:6px;display:flex;align-items:center;gap:8px;}\n.res-seccion .cuenta{background:var(--fondo);border-radius:10px;padding:1px 8px;font-size:12px;color:var(--texto-suave);}\n.res-seccion ul{list-style:none;}\n.res-seccion li{padding:8px 0;border-top:1px solid var(--linea);font-size:14px;line-height:1.5;word-break:break-word;}\n.res-seccion li:first-child{border-top:none;}\n.res-seccion li strong{display:block;font-weight:700;color:var(--texto);}\n.res-seccion li span{display:block;color:var(--texto-suave);}\n.res-seccion li strong .nit{display:inline;font-weight:600;color:var(--texto-suave);font-size:13px;}\n@media (max-width:600px){.res-contadores{gap:6px;}.chip{padding:10px 4px;font-size:12px;}.chip b{font-size:20px;}}\n.card ul.consejos{list-style:none;margin-top:12px;color:var(--texto-suave);line-height:1.6;text-align:center;}\n.card .detalle-tecnico{margin-top:14px;font-size:12px;color:#9a9a9a;word-break:break-word;}\n@media (max-width:600px){.navbar img{height:36px;}.container{padding:20px 12px;}.card{padding:24px 18px;border-radius:10px;}.card h1{font-size:19px;}.env-banner{font-size:12px;}.env-banner .sep{display:none;}}\n</style>`;\n\nconst UI_LOGO = 'https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg';\n\n// Muestra \"Procesando…\" al enviar un formulario o seguir un botón, y evita el doble envío.\nconst UI_SCRIPT = `<div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn,a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script>`;\n\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\n\n// Banner con el nombre de la aplicación, el usuario autenticado y \"Cerrar sesión\"\nfunction uiBanner(app, usuario, urlSalir) {\n  return '<div class=\"env-banner\"><span>' + esc(app) + '</span>'\n    + (usuario ? '<span class=\"sep\">|</span><span class=\"usuario\">' + esc(usuario) + '</span>' : '')\n    + (urlSalir ? '<a href=\"' + esc(urlSalir) + '\">Cerrar sesión</a>' : '') + '</div>';\n}\n\n// Partes fijas de la página: inicio (hasta abrir la tarjeta) y fin (cierre + \"Procesando…\")\nfunction uiMarco({ titulo, app, usuario, urlSalir, ancho = false }) {\n  return {\n    inicio: '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">'\n      + '<title>' + esc(titulo) + '</title>' + UI_ESTILOS + '</head><body>' + uiBanner(app, usuario, urlSalir)\n      + '<div class=\"navbar\"><img src=\"' + UI_LOGO + '\" alt=\"Finamiga\"></div><div class=\"container' + (ancho ? ' ancho' : '') + '\"><div class=\"card\">',\n    fin: '</div></div>' + UI_SCRIPT + '</body></html>',\n  };\n}\n\n// Formulario a partir de una lista de campos.\n// campo: { nombre, etiqueta, tipo: 'text'|'number'|'password'|'email'|'date'|'select'|'textarea'|'file',\n//          requerido, opciones: [texto | {valor, texto}], valor, placeholder, ayuda, aceptar (tipos de archivo),\n//          patron (regex HTML, p. ej. '\\\\d{8}'), mensajePatron, longitud (máx. caracteres), teclado ('numeric'…) }\n// error: mensaje que se muestra arriba del formulario (p. ej. validación del servidor).\n// La validación del navegador (patron) es solo ayuda: el flujo siempre debe validar de nuevo.\nfunction uiFormulario({ titulo, descripcion, accion, campos, boton = 'Enviar', campoSesion = '', error = '' }) {\n  const conArchivo = campos.some((c) => c.tipo === 'file');\n  let html = '<h1>' + esc(titulo) + '</h1>' + (descripcion ? '<p class=\"descripcion\">' + esc(descripcion) + '</p>' : '')\n    + (error ? '<div class=\"alerta error\">' + esc(error) + '</div>' : '')\n    + '<form method=\"POST\" action=\"' + esc(accion) + '\"' + (conArchivo ? ' enctype=\"multipart/form-data\"' : '') + '>' + campoSesion;\n  for (const c of campos) {\n    const id = 'f_' + String(c.nombre).replace(/[^A-Za-z0-9_]/g, '_');\n    const req = c.requerido ? ' required' : '';\n    html += '<label for=\"' + id + '\">' + esc(c.etiqueta) + '</label>';\n    if (c.tipo === 'select') {\n      html += '<select name=\"' + esc(c.nombre) + '\" id=\"' + id + '\"' + req + '>';\n      for (const o of c.opciones || []) {\n        const valor = typeof o === 'object' ? o.valor : o;\n        const texto = typeof o === 'object' ? o.texto : o;\n        html += '<option value=\"' + esc(valor) + '\"' + (String(valor) === String(c.valor ?? '') ? ' selected' : '') + '>' + esc(texto) + '</option>';\n      }\n      html += '</select>';\n    } else if (c.tipo === 'textarea') {\n      html += '<textarea name=\"' + esc(c.nombre) + '\" id=\"' + id + '\"' + req + (c.placeholder ? ' placeholder=\"' + esc(c.placeholder) + '\"' : '') + '>' + esc(c.valor ?? '') + '</textarea>';\n    } else {\n      html += '<input type=\"' + esc(c.tipo || 'text') + '\" name=\"' + esc(c.nombre) + '\" id=\"' + id + '\"' + req\n        + (c.valor != null && c.tipo !== 'file' && c.tipo !== 'password' ? ' value=\"' + esc(c.valor) + '\"' : '')\n        + (c.placeholder ? ' placeholder=\"' + esc(c.placeholder) + '\"' : '')\n        + (c.patron ? ' pattern=\"' + esc(c.patron) + '\"' : '')\n        + (c.mensajePatron ? ' title=\"' + esc(c.mensajePatron) + '\"' : '')\n        + (c.longitud ? ' maxlength=\"' + Number(c.longitud) + '\"' : '')\n        + (c.teclado ? ' inputmode=\"' + esc(c.teclado) + '\"' : '')\n        + (c.aceptar ? ' accept=\"' + esc(c.aceptar) + '\"' : '') + ' autocomplete=\"off\">';\n    }\n    if (c.ayuda) html += '<p class=\"hint\">' + esc(c.ayuda) + '</p>';\n  }\n  return html + '<button type=\"submit\">' + esc(boton) + '</button></form>';\n}\n// </ui-estandar>\n\n// ------------------------------------------------------------ Acceso Microsoft 365\nconst marco = uiMarco({ titulo: 'Acceso con Microsoft 365', app: 'Acceso con Microsoft 365' });\nreturn [{ json: { ...$input.first().json, ui: { inicio: marco.inicio, fin: marco.fin } }, pairedItem: { item: 0 } }];\n"
+      },
+      "id": "6d29c28f-71b4-43d6-ad53-08a28b42e45f",
+      "name": "UI estándar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -2464
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ $json.acceso.salida }}"
+      },
+      "id": "0b56c8d7-07e4-421a-9c80-0d5d82284325",
+      "name": "Acceso: ruta",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        -2656
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "operacion": "iniciarLogin",
+            "app": "={{ $('Config acceso').first().json.acceso.app }}",
+            "redirectUri": "={{ $('Config acceso').first().json.acceso.redirectUri }}",
+            "cookies": "",
+            "query": "={{ JSON.parse('{}') }}",
+            "tokenSesion": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "operacion",
+              "displayName": "operacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "redirectUri",
+              "displayName": "redirectUri",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cookies",
+              "displayName": "cookies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "tokenSesion",
+              "displayName": "tokenSesion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8528d808-ecd2-4022-b04c-949175849514",
+      "name": "Auth: iniciar login",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -2896
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c53376dd-0462-4a22-adcd-34d0c5507fb4",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "def32ede-61f5-4025-9bd8-3461f5af51c8",
+      "name": "IF Login preparado",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -2896
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 302,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Location",
+                "value": "={{ $json.urlRedireccion }}"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "={{ $json.setCookie }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fd49cd43-c653-4d13-ae9f-32f2bf253c58",
+      "name": "Respond Redirigir a Microsoft",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1104,
+        -3008
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "operacion": "cerrarSesion",
+            "app": "={{ $('Config acceso').first().json.acceso.app }}",
+            "redirectUri": "",
+            "cookies": "={{ $('Config acceso').first().json.headers.cookie ?? '' }}",
+            "query": "={{ JSON.parse('{}') }}",
+            "tokenSesion": "={{ $('Config acceso').first().json.acceso.sesion }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "operacion",
+              "displayName": "operacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "redirectUri",
+              "displayName": "redirectUri",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cookies",
+              "displayName": "cookies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "tokenSesion",
+              "displayName": "tokenSesion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "850991dd-7f75-4a94-9c41-e36a7f77c94e",
+      "name": "Auth: cerrar sesión",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -2656
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('UI estándar').first().json.ui.inicio + '<div class=\"status-icon exito\">&#10004;</div><h1>Sesión cerrada</h1><p>Cerraste tu sesión de Microsoft 365 en este formulario.</p><a class=\"btn\" href=\"' + $('Config acceso').first().json.acceso.urls.ingresar + '\">Iniciar sesión de nuevo</a>' + $('UI estándar').first().json.ui.fin }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "={{ $json.setCookie || 'm365_cierre=; Path=/webhook; Max-Age=0' }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c97ec92a-4f16-4441-b81d-b6915bbafd36",
+      "name": "Respond Sesion cerrada",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        -2656
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "operacion": "procesarCallback",
+            "app": "={{ $('Config acceso').first().json.acceso.app }}",
+            "redirectUri": "={{ $('Config acceso').first().json.acceso.redirectUri }}",
+            "cookies": "={{ $('Config acceso').first().json.headers.cookie ?? '' }}",
+            "query": "={{ $('Config acceso').first().json.query }}",
+            "tokenSesion": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "operacion",
+              "displayName": "operacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "redirectUri",
+              "displayName": "redirectUri",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cookies",
+              "displayName": "cookies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "tokenSesion",
+              "displayName": "tokenSesion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e76a1ea1-6693-430c-8c63-feba4a039f93",
+      "name": "Auth: procesar regreso",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -2416
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f682f6eb-a14d-487e-8140-ca4b573836b7",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "54023910-210b-4930-8665-696f5df56f3c",
+      "name": "IF Sesion creada",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -2416
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 302,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Location",
+                "value": "={{ $json.urlDestino }}"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "={{ $json.setCookie }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "48fe7272-4445-47d8-ad43-2fa79562eb10",
+      "name": "Respond Ir a la aplicación",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1104,
+        -2496
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('UI estándar').first().json.ui.inicio + '<div class=\"status-icon error\">&#10006;</div>' + ($json.html || '<h1>Acceso denegado</h1><p>No fue posible validar tu identidad con Microsoft 365.</p>') + '<a class=\"btn\" href=\"' + $('Config acceso').first().json.acceso.urls.ingresar + '\">Intentar de nuevo</a>' + $('UI estándar').first().json.ui.fin }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "31937027-c25f-4115-8428-ee484112eb68",
+      "name": "Respond Acceso denegado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1328,
+        -2576
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# Login Microsoft 365 · estándar UNI2 (issue #389)\nLogin único para **todos** los flujos n8n que usan personas. Un solo flujo, tres entradas:\n\n| Entrada | Quién la usa |\n|---|---|\n| **Webhooks** (bloque superior) | El navegador: `/webhook/<ingreso>?app=<app>`, regreso desde Microsoft, cierre de sesión |\n| **Entrada** (Execute Workflow) | Los flujos de cada app: operación `verificarSesion` |\n| **Limpieza diaria** (3:00) | Mantenimiento de sesiones, inicios y registro de accesos (90 días) |\n\n**Agregar una app:** entrada en *Registro de aplicaciones* + credencial + rama de canje + webhook de regreso en *Config acceso* (o la URI genérica).\n**En el flujo de la app:** Webhook → *Auth: verificar sesión* (este flujo) → *UI estándar* → su lógica.",
+        "height": 460,
+        "width": 900,
+        "color": 7
+      },
+      "id": "b1f6a0de-3c1e-4c55-9d7a-5d1f0e0a0001",
+      "name": "Nota · Login Microsoft 365",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        -3008
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada": {
+      "main": [
+        [
+          {
+            "node": "Registro de aplicaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro de aplicaciones": {
+      "main": [
+        [
+          {
+            "node": "Operación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Operación": {
+      "main": [
+        [
+          {
+            "node": "Login: generar state",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Callback: revisar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sesión: preparar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cierre: preparar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login: generar state": {
+      "main": [
+        [
+          {
+            "node": "Login: generar nonce",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login: generar nonce": {
+      "main": [
+        [
+          {
+            "node": "Login: armar autorización",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login: armar autorización": {
+      "main": [
+        [
+          {
+            "node": "Login: guardar state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login: guardar state": {
+      "main": [
+        [
+          {
+            "node": "Login: resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: revisar respuesta": {
+      "main": [
+        [
+          {
+            "node": "¿Respuesta completa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Respuesta completa?": {
+      "main": [
+        [
+          {
+            "node": "Callback: buscar state",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: buscar state": {
+      "main": [
+        [
+          {
+            "node": "Callback: consumir state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: consumir state": {
+      "main": [
+        [
+          {
+            "node": "Callback: limpiar vencidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: limpiar vencidos": {
+      "main": [
+        [
+          {
+            "node": "Callback: validar state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: validar state": {
+      "main": [
+        [
+          {
+            "node": "¿State válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿State válido?": {
+      "main": [
+        [
+          {
+            "node": "Canje: elegir app",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canje: elegir app": {
+      "main": [
+        [
+          {
+            "node": "Canje · Reconstruye",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Canje · Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Canje · Rindegastos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canje · Reconstruye": {
+      "main": [
+        [
+          {
+            "node": "Callback: validar identidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canje · Extractor": {
+      "main": [
+        [
+          {
+            "node": "Callback: validar identidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canje · Rindegastos": {
+      "main": [
+        [
+          {
+            "node": "Callback: validar identidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: validar identidad": {
+      "main": [
+        [
+          {
+            "node": "¿Identidad válida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Identidad válida?": {
+      "main": [
+        [
+          {
+            "node": "Registro: preparar inicio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro: preparar inicio": {
+      "main": [
+        [
+          {
+            "node": "Registro: guardar inicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro: guardar inicio": {
+      "main": [
+        [
+          {
+            "node": "Callback: modo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: modo": {
+      "main": [
+        [
+          {
+            "node": "Callback: firmar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Callback: generar id de sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: firmar sesión": {
+      "main": [
+        [
+          {
+            "node": "Callback: resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: generar id de sesión": {
+      "main": [
+        [
+          {
+            "node": "Callback: preparar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: preparar sesión": {
+      "main": [
+        [
+          {
+            "node": "Callback: guardar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: guardar sesión": {
+      "main": [
+        [
+          {
+            "node": "Callback: limpiar sesiones vencidas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback: limpiar sesiones vencidas": {
+      "main": [
+        [
+          {
+            "node": "Callback: resultado (tabla)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: preparar": {
+      "main": [
+        [
+          {
+            "node": "¿Hay sesión?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay sesión?": {
+      "main": [
+        [
+          {
+            "node": "Sesión: modo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: modo": {
+      "main": [
+        [
+          {
+            "node": "Sesión: verificar firma",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sesión: buscar en tabla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: verificar firma": {
+      "main": [
+        [
+          {
+            "node": "Sesión: validar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sesión: firma rechazada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: validar": {
+      "main": [
+        [
+          {
+            "node": "¿Sesión válida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: buscar en tabla": {
+      "main": [
+        [
+          {
+            "node": "Sesión: validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: validar fila": {
+      "main": [
+        [
+          {
+            "node": "¿Sesión válida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cierre: preparar": {
+      "main": [
+        [
+          {
+            "node": "Cierre: modo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cierre: modo": {
+      "main": [
+        [
+          {
+            "node": "Registro: preparar cierre",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cierre: buscar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cierre: buscar sesión": {
+      "main": [
+        [
+          {
+            "node": "Cierre: borrar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cierre: borrar sesión": {
+      "main": [
+        [
+          {
+            "node": "Registro: preparar cierre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro: preparar cierre": {
+      "main": [
+        [
+          {
+            "node": "Registro: guardar cierre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro: guardar cierre": {
+      "main": [
+        [
+          {
+            "node": "Cierre: resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpieza diaria": {
+      "main": [
+        [
+          {
+            "node": "Limpieza: sesiones vencidas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpieza: sesiones vencidas": {
+      "main": [
+        [
+          {
+            "node": "Limpieza: inicios vencidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpieza: inicios vencidos": {
+      "main": [
+        [
+          {
+            "node": "Limpieza: registro antiguo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sesión: firma rechazada": {
+      "main": [
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Sesión válida?": {
+      "main": [
+        [
+          {
+            "node": "Sesión: resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error: describir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Ingresar": {
+      "main": [
+        [
+          {
+            "node": "Config acceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Regreso · rindegastos": {
+      "main": [
+        [
+          {
+            "node": "Config acceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config acceso": {
+      "main": [
+        [
+          {
+            "node": "UI estándar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UI estándar": {
+      "main": [
+        [
+          {
+            "node": "Acceso: ruta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acceso: ruta": {
+      "main": [
+        [
+          {
+            "node": "Auth: iniciar login",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auth: cerrar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auth: procesar regreso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: iniciar login": {
+      "main": [
+        [
+          {
+            "node": "IF Login preparado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Login preparado": {
+      "main": [
+        [
+          {
+            "node": "Respond Redirigir a Microsoft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: cerrar sesión": {
+      "main": [
+        [
+          {
+            "node": "Respond Sesion cerrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: procesar regreso": {
+      "main": [
+        [
+          {
+            "node": "IF Sesion creada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Sesion creada": {
+      "main": [
+        [
+          {
+            "node": "Respond Ir a la aplicación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "79f2229f-fb9f-4d99-a29c-101850d9a965",
+  "meta": {
+    "instanceId": "150c3cb1febd31c154225e14a4f0d222a22a3b7f69666ab64dd444fe9769d7dc"
+  },
+  "nodeGroups": [],
+  "id": "1yD3JSYX8nMJqeID",
+  "tags": []
+}

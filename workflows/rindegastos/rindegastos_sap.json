@@ -1,0 +1,3226 @@
+{
+  "name": "RindegastosSAP",
+  "nodes": [
+    {
+      "parameters": {
+        "fieldToSplitOut": "Expenses",
+        "options": {}
+      },
+      "id": "f1cd2bb7-2957-44a0-8264-97ba3dadf340",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "body.value[0].FederalTaxID",
+              "field2": "nitConDV"
+            }
+          ]
+        },
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "id": "17f95bfe-d17d-400c-9f08-e677556f867f",
+      "name": "Merge1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1408,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f5f3bdd6-36f4-4f81-9faa-5bf2cd2a1245",
+                    "leftValue": "={{ $json.ExtraFields[0].Name }}",
+                    "rightValue": "=NIT Proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Factura sin NIT Proveedor"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.value }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "array",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "bb519a54-43dd-47b4-b3e9-05f00f34a17e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Factura con NIT Proveedor creado en SAP"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "937f18ef-2d14-431a-a4cc-4445d330b730",
+                    "leftValue": "={{ $json.body.value }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "array",
+                      "operation": "lengthEquals",
+                      "rightType": "number"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Factura con NIT Proveedor NO creado en SAP"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bc2de2f7-c5a2-4fce-864f-6e54116f021b",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Expenses }}",
+                    "rightValue": "={{ \"La solicitud tuvo éxito.\" }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "1bf4a778-5294-4004-b15d-fd2f11859298"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6e07039b-5781-4f35-8af3-1d3715facdfc",
+                    "leftValue": "={{ $json.statusCode }}",
+                    "rightValue": "429",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "11fbf96f-9e07-41f9-869e-cd1ce53c1f54",
+                    "leftValue": "={{ $json.Records.ResponseMessage }}",
+                    "rightValue": "={{ \"No se encontraron gastos bajo los filtros ingresados.\" }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "5a4cb3c8-4d01-4403-8e2e-fa9fcf4955ef",
+      "name": "Switch1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('UI estándar').first().json.ui.inicio + (function () { const esc = s => String(s == null ? '' : s).replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c]); const titulo = String(\"Advertencia\"); const icono = 'aviso'; return '<div class=\"status-icon ' + icono + '\">' + ({ exito: '&#10004;', error: '&#10006;', aviso: '!' })[icono] + '</div><h1>' + esc(titulo) + '</h1><div class=\"mensaje\">' + esc(String(\"Por favor, reintente nuevamente en 10 segundos.\").trim()).replace(/\\n/g, '<br>') + '</div><a class=\"btn\" href=\"' + $('UI estándar').first().json.ui.urlFormulario + '\">Volver</a><a class=\"btn-back\" href=\"' + $('UI estándar').first().json.ui.urlSalir + '\">Cerrar sesión</a>'; })() + $('UI estándar').first().json.ui.fin }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e86dea10-08a5-485d-8d2c-9bde3422f492",
+      "name": "Se han realizado multiple peticiones a la misma API",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('UI estándar').first().json.ui.inicio + (function () { const esc = s => String(s == null ? '' : s).replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c]); const titulo = String(\"Advertencia\"); const icono = 'aviso'; return '<div class=\"status-icon ' + icono + '\">' + ({ exito: '&#10004;', error: '&#10006;', aviso: '!' })[icono] + '</div><h1>' + esc(titulo) + '</h1><div class=\"mensaje\">' + esc(String(\"No se encontraron gastos bajo los filtros ingresados.\").trim()).replace(/\\n/g, '<br>') + '</div><a class=\"btn\" href=\"' + $('UI estándar').first().json.ui.urlFormulario + '\">Volver</a><a class=\"btn-back\" href=\"' + $('UI estándar').first().json.ui.urlSalir + '\">Cerrar sesión</a>'; })() + $('UI estándar').first().json.ui.fin }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "4cf7b528-65e0-4976-a4dc-d5fa27ec0485",
+      "name": "No se encontraron gastos",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        464,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function calcularDV(nit) {\n  const nitStr = String(nit).replace(/[^0-9]/g, '');\n  const pesos = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3];\n  const offset = pesos.length - nitStr.length;\n  let suma = 0;\n  for (let i = 0; i < nitStr.length; i++) {\n    suma += parseInt(nitStr[i]) * pesos[offset + i];\n  }\n  const resto = suma % 11;\n  return (resto === 0 || resto === 1) ? resto : 11 - resto;\n}\n\nreturn items.map(item => {\n  const expense = item.json;\n\n  const nitField = (expense.ExtraFields || [])\n    .find(f => f.Name === \"NIT Proveedor\");\n\n  let nit = null;\n\n  if (nitField?.Value) {\n    nit = nitField.Value.includes('-')\n      ? nitField.Value.split('-')[0].trim()\n      : nitField.Value.trim();\n  }\n\n  const dv = nit ? calcularDV(nit) : null;\n\n  return {\n    json: {\n      ...expense,\n      nitProveedor: 'P' + nit,\n      nitLimpio: nit,\n      dvCalculado: dv,\n      nitConDV: nit ? (nit + '-' + dv) : null\n    }\n  };\n});"
+      },
+      "id": "70e7c8fc-4898-4b4c-8258-a84d686e0276",
+      "name": "Agrega el nitProveedor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const unique = new Map();\n\nfor (const item of items) {\n  const expense = item.json;\n\n  const nitField = (expense.ExtraFields || [])\n    .find(f => f.Name === \"NIT Proveedor\");\n\n  let nit = null;\n\n  if (nitField?.Value) {\n    nit = nitField.Value.includes('-')\n      ? nitField.Value.split('-')[0].trim()\n      : nitField.Value.trim();\n  }\n\n  if (!nit) continue;\n\n  if (!unique.has(nit)) {\n    unique.set(nit, {\n      json: {\n        nitProveedor: nit,\n        gastos: []\n      }\n    });\n  }\n\n  unique.get(nit).json.gastos.push(expense);\n}\n\nreturn Array.from(unique.values());"
+      },
+      "id": "32659b61-8f57-4497-a77a-eaeeae7de690",
+      "name": "Tomar los nits unicos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "64759d83-f412-40e3-a4d8-6a117c3f469c",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ebb984e3-110a-4bbf-a17b-c9baa4431d49",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3008,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ExtraFields.find(f => f.Name === 'Tipo de Documento').Code }}",
+                    "rightValue": 102,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "69686a0e-9359-49e0-9ec4-69e02db6e6e8"
+                  },
+                  {
+                    "leftValue": "={{ $json.ExtraFields.find(f => f.Name === 'Tipo de Documento').Code }}",
+                    "rightValue": 120,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "c07a841e-5ca2-4361-8c4f-a01a8ce06a98"
+                  }
+                ],
+                "combinator": "or"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b936f19f-1351-4fb8-afe0-41d2dd92a47a",
+      "name": "Switch2",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "alwaysOutputData": false,
+      "position": [
+        2240,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.rindegastos.com/v2/getExpenses?ReportId={{ $('On form submission').first().json.id_informe_de_gastos }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "id": "0f15afc5-b862-49fd-b4fe-e447f4714eb0",
+      "name": "Rindegastos getExpenses?ReportId",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        64,
+        0
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "kjjfgPhLIXMu1Rdy",
+          "name": "Token auth rindegastos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/BusinessPartners?$filter=CardCode eq 'P{{ $json.nitProveedor }}' or CardCode eq 'p{{ $json.nitProveedor }}'",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('SAP Login').first().json.headers[\"set-cookie\"][0] }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "ed3c7b1a-10d0-4dcc-b099-4c92654a9041",
+      "name": "SAP BusinessPartners? filter by NIT Proveedor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1264,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/PurchaseInvoices",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('SAP Login').first().json.headers[\"set-cookie\"][0] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify((() => {\n  const allTaxes = $json.MultipleTaxes?.taxes ?? [];\n  const net = parseFloat($json.Net ?? $json.OriginalAmount ?? 0);\n  const oficina  = $json.ExtraFields?.find(f => f.Name === 'Oficina')?.Code;\n  const area     = $json.ExtraFields?.find(f => f.Name === 'Area')?.Code;\n  const itemCode = $json.CategoryCode;\n  const lineBase = { Quantity: 1, CostingCode: 'CO', CostingCode4: parseInt(oficina), CostingCode5: area };\n  const docDate = ($json.IssueDate).split('T')[0];\n\n  // Aislar impuesto al consumo (IMPC*) → va a DocumentAdditionalExpenses, no a línea de impuesto\n  const CONSUMO_EXP_CODE = 8;\n  const consumoLines = allTaxes.filter(t => t.code && t.code.startsWith('IMPC'));\n\n  const taxLines   = allTaxes.filter(t => t.code && t.type !== 2 && !t.code.startsWith('IMPC'));\n  const retenLines = allTaxes.filter(t => t.code && (t.type === 2 || parseFloat(t.retentionAmount ?? 0) > 0));\n\n  const retenMap = {\n    'RETASUM53': { wtCode: 'RIN1', sapItem: 'RETASUM53' },\n    'RETICAASUM53':  { wtCode: 'RS4N',  sapItem: 'RETICAASUM53' },\n  };\n\n  const taxDocLines = taxLines.length > 0\n    ? taxLines.map(t => ({ ...lineBase, ItemCode: itemCode, Price: parseFloat(t.baseAmount), TaxCode: t.code }))\n    : (() => {\n        const singleCode = $json.Taxes?.code;\n        const defaultCode = consumoLines.length > 0 ? 'IVAEXC' : (singleCode || undefined);\n        return [{ ...lineBase, ItemCode: itemCode, Price: net, ...(defaultCode ? { TaxCode: defaultCode } : {}) }];\n      })();\n\n  const retenDocLines = retenLines\n  .map(t => {\n    const wtAmount  = parseFloat(t.retentionAmount ?? t.retention ?? 0);\n    const firstWord = (t.retentionName ?? '').trim().split(/\\s+/)[0].toUpperCase();\n    const sapItem   = firstWord === 'RETEICA' ? 'RETICAASUM53' : 'RETASUM53';\n    return { ...lineBase, ItemCode: sapItem, Price: wtAmount, TaxCode: 'IVAEXC' };\n  })\n  .filter(l => l.Price > 0);\n\n  const withholdingData = retenLines\n    .map(t => {\n      const wtAmount = parseFloat(t.retentionAmount ?? t.retention ?? 0);\n      const mapped   = retenMap[t.code] ?? { wtCode: t.code };\n      const baseReten = t.base ? parseFloat(t.base) : 0;\n      return { WTCode: mapped.wtCode, WTAmount: wtAmount, TaxableAmount: wtAmount, Rate: 100, U_HBT_BaseRet: baseReten };\n    })\n    .filter(w => w.WTAmount > 0);\n\n  // Gastos adicionales por impuesto al consumo (TaxCode IVAEXC, no como impuesto de línea)\n  const consumoExpenses = consumoLines\n    .map(t => ({\n        ExpenseCode: CONSUMO_EXP_CODE,\n        LineTotal: parseFloat(t.taxAmount ?? t.tax ?? 0),\n        TaxCode: 'IVAEXC',\n        DistributionMethod: 'aedm_None',\n        DistributionRule: 'CO',\n        DistributionRule4: oficina,\n        DistributionRule5: area,\n    }))\n    .filter(e => e.LineTotal > 0);\n\n  const doc = {\n    CardCode: $('Switch2').item.json.body?.value?.[0]?.CardCode ?? $('Switch2').item.json.body?.CardCode,\n    DocDate: docDate,\n    DocDueDate: docDate,\n    Comments: $json.Note,\n    SalesPersonCode: (() => {\n      const num = parseInt($('Rindegastos getExpenseReport').first().json?.ExpenseReports?.Employee?.Number, 10);\n      return Number.isFinite(num) ? num : -1;\n    })(),\n    NumAtCard: $json.ExtraFields.find(f => f.Name === \"Número de Documento\").Value,\n    Series: parseInt($json.ExtraFields.find(f => f.Name === \"Tipo de Documento\").Code),\n    DocumentLines: [...taxDocLines, ...retenDocLines],\n  };\n  if (withholdingData.length > 0) doc.WithholdingTaxDataCollection = withholdingData;\n  if (consumoExpenses.length > 0) doc.DocumentAdditionalExpenses = consumoExpenses;\n  return doc;\n})()) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "5c4b8835-d956-4fc2-8f31-13aaf168725e",
+      "name": "SAP PurchaseInvoices CREATE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2784,
+        -464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/BusinessPartners",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('SAP Login').first().json.headers[\"set-cookie\"][0] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify((() => {\n  const ef = $json.ExtraFields ?? [];\n  const nit = $json.nitProveedor;\n  const nombre = $json.Supplier;\n\n  const federalTaxID = ef.find(f => f.Name === 'NIT Proveedor')?.Value ?? ef[0]?.Value ?? null;\n  const telefono = ef.find(f => f.Name === 'Telefono')?.Value ?? null;\n  const direccion = ef.find(f => f.Name === 'Dirección proveedor')?.Value ?? null;\n  const correo = ef.find(f => f.Name === 'Correo')?.Value ?? null;\n  const municipio = ef.find(f => f.Name === 'Municipio proveedor')?.Code ?? null;\n  const nombreMunicipio = ef.find(f => f.Name === 'Municipio proveedor')?.Value ?? null;\n  const departamento = nombreMunicipio ? nombreMunicipio.split(' - ')[0].trim() : null;\n  const ciudad = nombreMunicipio ? nombreMunicipio.split(' - ')[1].trim() : null;\n  const deptoMap = {\n    'CUNDINAMARCA':'001','VALLE DEL CAUCA':'002','HUILA':'003','NARIÑO':'004',\n    'CAUCA':'005','ANTIOQUIA':'006','CALDAS':'007','BOYACA':'008','CÓRDOBA':'009'\n  };\n  const stateCode = departamento ? (deptoMap[departamento] ?? null) : null;\n  const naturalezaPersona = ef.find(f => f.Name === 'Naturaleza persona')?.Code ?? null;\n  const responsabilidadFiscal = ef.find(f => f.Name === 'Responsabilidad fiscal')?.Code ?? null;\n  const retenLines = ($json.MultipleTaxes?.taxes ?? [])\n    .filter(t => t.code && t.retentionName != null && t.retentionName !== '');\n\n  // Construir el objeto base\n  const bp = {\n    CardCode: nit,\n    CardName: $json.CardNameSAP ?? nombre,\n    CardType: 'cSupplier',\n    GroupCode: 101,\n    FederalTaxID: $json.federalTaxIDFinal ?? federalTaxID,\n    Phone1: telefono,\n    City: ciudad,\n    County: '57',\n    Country: 'CO',\n    EmailAddress: correo,\n    // MailCity: null,\n    // MailCounty: '57',\n    // MailCountry: 'CO',\n    BilltoDefault: 'PRINCIPAL',\n    VatLiable: 'vLiable',\n    Address: direccion,\n    BilltoDefault: 'PRINCIPAL',\n    BillToState: stateCode,\n    ShipToDefault: '',\n    U_HBT_MunMed: municipio,\n    U_HBT_RegTrib: 'RS',\n    U_HBT_TipDoc: '31', // NIT volver dinamico\n    U_HBT_RegFis: 48, // volver dinamico\n    U_HBT_TipEnt: naturalezaPersona,\n    // Campos de nombre desglosado para persona natural (Code === 1)\n    ...((Number(naturalezaPersona) === 1) ? {\n      U_HBT_Nombres:   $json.U_HBT_Nombres   ?? '',\n      U_HBT_Apellido1: $json.U_HBT_Apellido1 ?? '',\n      U_HBT_Apellido2: $json.U_HBT_Apellido2 ?? '',\n    } : {}),\n    // U_HBT_Nacional: 1,\n    // U_HBT_ActEco: '5530',\n    // U_HBT_MedPag: '31',\n    // Añadir SubjectToWithholdingTax condicionalmente\n    U_HBT_ResFis: responsabilidadFiscal,\n    DebitorAccount: \"23359501\",\n    ...(retenLines.length > 0 ? { SubjectToWithholdingTax: 'boYES' } : {}),\n    BPAddresses: [{\n      AddressName: 'PRINCIPAL',\n      Street: direccion,\n      City: ciudad,\n      // County: 'CO',\n      Country: 'CO',\n      State: stateCode,\n      FederalTaxID: null,\n      TaxCode: null,\n      BuildingFloorRoom: null,\n      AddressType: 'bo_BillTo',\n      BPCode: nit,\n      RowNum: 0,\n      CreateDate: $now.setZone('America/Bogota').toFormat('yyyy-MM-dd') + 'T00:00:00Z',\n      CreateTime: $now.setZone('America/Bogota').toFormat('HH:mm:ss'),\n      MYFType: null,\n      TaasEnabled: 'tYES',\n      U_HBT_MunMed: municipio,\n      U_HBT_DirMM: 'Y',\n      ZipCode: municipio,\n    }],\n    ContactEmployees: []\n  };\n\n  // Agregar BPWithholdingTaxCollection solo si hay retenciones\n  if (retenLines.length > 0) {\n    bp.BPWithholdingTaxCollection = retenLines.map(t => ({\n      WTCode: t.code,\n      BPCode: nit\n    }));\n  }\n\n  return bp;\n})()) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "ac6c61d5-e4da-4e27-8730-ed12159944c2",
+      "name": "SAP BusinessPartners CREATE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2832,
+        288
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c78ef945-76ba-44f3-bd0d-a42f459921d2",
+              "name": "result",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "86a43b7a-ec0e-4a51-87fd-5e858267d22b",
+              "name": "tipo",
+              "value": "Proveedor",
+              "type": "string"
+            },
+            {
+              "id": "de88f6a7-9111-473a-b2a8-6764e004b0ce",
+              "name": "nit",
+              "value": "={{ $('Dedup NITs para Crear').item.json.nitProveedor ?? \"NIT desconocido\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2fc20b15-a8e1-4383-8854-d567c2725943",
+              "name": "mensaje",
+              "value": "={{ (() => {\n  try {\n    let body = $json.body;\n    if (typeof body === 'string' && body) {\n      try { body = JSON.parse(body); } catch(_) {}\n    }\n    if (body?.error?.code !== undefined) {\n      return 'Error SAP ' + body.error.code + ': ' + (body.error.message?.value ?? 'Error desconocido');\n    }\n    const raw = $json.error?.message ?? '';\n    if (raw) {\n      const first = raw.indexOf('\"');\n      const last = raw.lastIndexOf('\"');\n      if (first >= 0 && last > first) {\n        const unescaped = JSON.parse('\"' + raw.slice(first + 1, last) + '\"');\n        const parsed = JSON.parse(unescaped);\n        if (parsed?.error?.code !== undefined) {\n          return 'Error SAP ' + parsed.error.code + ': ' + (parsed.error.message?.value ?? 'Error desconocido');\n        }\n      }\n    }\n    return 'Error al crear proveedor en SAP';\n  } catch(e) { return 'Error al crear proveedor en SAP'; }\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "08f0f0dd-3c5a-4c92-aa59-ca37c081d2ba",
+              "name": "Supplier",
+              "value": "={{ $('Dedup NITs para Crear').item.json.Supplier ?? 'Proveedor desconocido' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b724142c-6713-42ba-9baf-0603ddae8229",
+      "name": "Set Error BP",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3264,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.items ?? [];\nconst exitos    = items.filter(i => i.result === 'success' && i.tipo !== 'Proveedor');\nconst yaExistia = items.filter(i => i.result === 'ya_existia');\nconst errores   = items.filter(i => i.result === 'error' && i.tipo !== 'Proveedor');\nconst bpExitos  = items.filter(i => i.result === 'success' && i.tipo === 'Proveedor');\nconst bpErrores = items.filter(i => i.result === 'error' && i.tipo === 'Proveedor');\n\n// Errores ignorables: asientos con categoría no soportada\n// (no son tipos relevantes para integrar en Rindegastos)\nconst esErrorIgnorable = (e) =>\n  e.tipo === 'asiento' && (e.mensaje ?? '').includes('Categoría de asiento no soportada');\n\nconst erroresRelevantes = errores.filter(e => !esErrorIgnorable(e));\n\nconst allDocNums = [\n  ...exitos.map(e => String(e.DocNum)),\n  ...yaExistia.filter(e => e.DocNum).map(e => String(e.DocNum))\n].filter(Boolean);\nconst docNums = allDocNums.join(',');\n\nconst hayExitos  = (exitos.length + yaExistia.length) > 0;\nconst hayErrores = errores.length > 0 || bpErrores.length > 0;\n\n// Solo errores relevantes (facturas + asientos Taxis/Peajes) y errores de socios de negocio afectan la integración\nconst reportIntegrationStatus = (erroresRelevantes.length > 0 || bpErrores.length > 0) ? 0 : 1;\n\nconst integrables = [\n  ...exitos.filter(e => e.expenseId).map(e => ({ expenseId: e.expenseId, docNum: e.DocNum ?? '', integrationStatus: 1 })),\n  ...yaExistia.filter(e => e.expenseId).map(e => ({ expenseId: e.expenseId, docNum: e.DocNum ?? '', integrationStatus: 1 })),\n  ...erroresRelevantes.filter(e => e.expenseId).map(e => ({ expenseId: e.expenseId, docNum: '', integrationStatus: 0 }))\n];\nconst hayIntegrables = integrables.length > 0;\n\nlet tituloEnvio;\nif (!hayErrores) {\n  tituloEnvio = 'Envio exitoso';\n} else if (!hayExitos) {\n  tituloEnvio = 'Envio fallido';\n} else {\n  tituloEnvio = 'Envio con errores';\n}\n\nlet resumen = '';\nif (exitos.length > 0) {\n  const lista = exitos.map(e => {\n    if (e.tipo === 'asiento') return `• ${e.supplier}: Asiento SAP #${e.DocNum}`;\n    return `• ${e.supplier ? e.supplier + ' NIT ' : ''}${e.CardCode}: Factura SAP #${e.DocNum}`;\n  }).join('\\n');\n  resumen += `${exitos.length} factura(s) creadas exitosamente:\\n${lista}`;\n}\nif (yaExistia.length > 0) {\n  if (resumen) resumen += '\\n\\n';\n  const lista = yaExistia.map(e => {\n    const docInfo = e.DocNum ? ` (DocNum SAP: #${e.DocNum})` : '';\n    const quienEs = e.supplier ? `${e.supplier} NIT ${e.CardCode}` : e.CardCode;\n    return `• Factura - ${quienEs}: Ya existia en SAP${docInfo}`;\n  }).join('\\n');\n  resumen += `${yaExistia.length} factura(s) ya existentes en SAP:\\n${lista}`;\n}\nif (errores.length > 0) {\n  if (resumen) resumen += '\\n\\n';\n  const lista = errores.map(e => {\n    const quienEs = e.supplier ? `${e.supplier} NIT ${e.CardCode}` : (e.CardCode ?? e.nit ?? 'NIT desconocido');\n    return `• ${quienEs}: ${e.mensaje}`;\n  }).join('\\n');\n  resumen += `${errores.length} error(es):\\n${lista}`;\n}\n\nlet resumenSocios = '';\nif (bpExitos.length > 0) {\n  const lista = bpExitos.map(e => `• ${e.Supplier ? e.Supplier + ' - ' : ''}NIT ${e.CardCode ?? e.nit}: Creado en SAP`).join('\\n');\n  resumenSocios += `${bpExitos.length} socio(s) de negocio creado(s):\\n${lista}`;\n}\nif (bpErrores.length > 0) {\n  if (resumenSocios) resumenSocios += '\\n\\n';\n  const lista = bpErrores.map(e => `• ${e.Supplier ? e.Supplier + ' - ' : ''}NIT ${e.nit ?? e.CardCode ?? 'desconocido'}: ${e.mensaje}`).join('\\n');\n  resumenSocios += `${bpErrores.length} socio(s) de negocio con error:\\n${lista}`;\n}\n\nreturn [{ json: { resumen, resumenSocios, docNums, hayExitos, hayErrores, hayIntegrables, integrables, reportIntegrationStatus, tituloEnvio } }];"
+      },
+      "id": "3ec484e5-95ae-4929-ae07-cb4164abe5fa",
+      "name": "Code Construir Resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3616,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1fccdc38-8712-49ef-804c-acad178438ad",
+              "leftValue": "={{ $json.hayIntegrables }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "122704a7-82f2-44d6-be9e-722e4e2cebe5",
+      "name": "If2 Hay Exitos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3808,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.rindegastos.com/v1/setExpenseReportIntegration",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{ \"Id\": parseInt($('On form submission').first().json.id_informe_de_gastos),\n\"IntegrationStatus\": $('Code Construir Resumen').first().json.reportIntegrationStatus,\n\"IntegrationCode\": $('Code Construir Resumen').first().json.docNums,\n\"IntegrationDate\": $now.toFormat('yyyy-MM-dd') } \n}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "eec4e5f1-825d-49bf-83fb-0f976e9275f1",
+      "name": "Rindegastos setExpenseReportIntegration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4672,
+        -496
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "kjjfgPhLIXMu1Rdy",
+          "name": "Token auth rindegastos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "options": {}
+      },
+      "id": "0cf7fa44-1c99-4f5e-91d9-d029186c333d",
+      "name": "Aggregate Todos",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "body.CardCode",
+              "field2": "nitProveedor"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2ae38597-f857-4314-bc0b-7a8abe4229e6",
+      "name": "Merge Datos BP",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2128,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst switchItems = $('WTCodes Coinciden').all();\n\nfunction isDuplicateRefError(json) {\n  // Solo es \"ya existía\" si el mensaje contiene el código específico de duplicado SAP (10001467)\n  // El -5002 genérico \"Internal error\" es un error real que debe reportarse\n  function hasDuplicateMsg(value) {\n    return typeof value === 'string' && value.includes('10001467');\n  }\n\n  let body = json.body;\n  if (typeof body === 'string' && body) {\n    try { body = JSON.parse(body); } catch (_) {}\n  }\n  if (body?.error?.code === -5002) {\n    return hasDuplicateMsg(body.error.message?.value);\n  }\n\n  const raw = json.error?.message ?? '';\n  try {\n    const first = raw.indexOf('\"');\n    const last = raw.lastIndexOf('\"');\n    if (first >= 0 && last > first) {\n      const unescaped = JSON.parse('\"' + raw.slice(first + 1, last) + '\"');\n      const parsed = JSON.parse(unescaped);\n      if (parsed?.error?.code === -5002) {\n        return hasDuplicateMsg(parsed.error.message?.value);\n      }\n    }\n  } catch (_) {}\n  return false;\n}\n\nfunction parseSapError(json) {\n  const status = json.statusCode ?? '';\n  const prefix = `Error${status ? ' ' + status : ''} al crear factura en SAP`;\n\n  let body = json.body;\n  if (typeof body === 'string' && body) {\n    try { body = JSON.parse(body); } catch (_) {}\n  }\n  if (body?.error?.code !== undefined) {\n    const value = body.error.message?.value ?? 'Error desconocido';\n    return `${prefix}: ${value}`;\n  }\n\n  const raw = json.error?.message ?? '';\n  if (!raw) return prefix;\n\n  const effectiveStatus = status || (raw.match(/^(\\d+)/) || [])[1] || '';\n  const effectivePrefix = `Error${effectiveStatus ? ' ' + effectiveStatus : ''} al crear factura en SAP`;\n\n  try {\n    const first = raw.indexOf('\"');\n    const last = raw.lastIndexOf('\"');\n    if (first >= 0 && last > first) {\n      const unescaped = JSON.parse('\"' + raw.slice(first + 1, last) + '\"');\n      const parsed = JSON.parse(unescaped);\n      if (parsed?.error?.code !== undefined) {\n        const value = parsed.error.message?.value ?? 'Error desconocido';\n        return `${effectivePrefix}: ${value}`;\n      }\n    }\n  } catch (_) {}\n\n  return `${effectivePrefix}: ${raw}`;\n}\n\nreturn items.map((item, i) => {\n  const json = item.json;\n  const swItem = switchItems[i] ?? switchItems[0];\n  const cardCode = swItem?.json?.body?.value?.[0]?.CardCode\n    ?? swItem?.json?.body?.CardCode\n    ?? 'Desconocido';\n  const expenseId = swItem?.json?.Id ?? null;\n\n  if (json.statusCode === 201) {\n    return {\n      json: {\n        result: 'success',\n        DocNum: String(json.body?.DocNum ?? ''),\n        CardCode: cardCode,\n        supplier: swItem?.json?.Supplier ?? cardCode,\n        expenseId\n      }\n    };\n  }\n\n  if (isDuplicateRefError(json)) {\n    const numAtCard = swItem?.json?.ExtraFields?.find(f => f.Name === 'Número de Documento')?.Value ?? '';\n    return {\n      json: {\n        result: 'ya_existia',\n        CardCode: cardCode,\n        supplier: swItem?.json?.Supplier ?? cardCode,\n        numAtCard,\n        expenseId\n      }\n    };\n  }\n\n  return {\n    json: {\n      result: 'error',\n      tipo: 'Factura',\n      CardCode: cardCode,\n      supplier: swItem?.json?.Supplier ?? null,\n      expenseId: swItem?.json?.Id ?? null,\n      mensaje: parseSapError(json)\n    }\n  };\n});"
+      },
+      "id": "eb8e49fc-20dd-4536-8ba0-6994e15cddda",
+      "name": "Procesar Resultado Factura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3056,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst result = [];\nfor (const item of items) {\n  const nit = item.json.nitProveedor;\n  if (!seen.has(nit)) {\n    seen.add(nit);\n    result.push(item);\n  }\n}\nreturn result;"
+      },
+      "id": "273f89ba-215c-49be-a2e5-e1d1d29ae573",
+      "name": "Dedup NITs para Crear",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 7
+      },
+      "id": "76eac248-18bf-416d-afef-45bcc0bbd4af",
+      "name": "Merge Resultados",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3248,
+        -240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d79dbf47-8cba-46e3-88fb-6c6f240cd220",
+      "name": "Merge Antes Switch2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2064,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const json = item.json;\n\n  // Soporta tanto respuesta GET/filter (body.value[0]) como POST/create (body directamente)\n  const vendorWTCodes = new Set(\n    (json.body?.value?.[0]?.BPWithholdingTaxCollection\n      ?? json.body?.BPWithholdingTaxCollection\n      ?? []).map(w => w.WTCode)\n  );\n\n  const allTaxes = json.MultipleTaxes?.taxes ?? [];\n  const retenLines = allTaxes.filter(t =>\n    t.code && (t.type === 2 || parseFloat(t.retentionAmount ?? 0) > 0)\n  );\n\n  const plannedWTCodes = retenLines.map(t => t.code);\n\n  // Sin retenciones planeadas → sin problema\n  if (plannedWTCodes.length === 0) {\n    return { json: { ...json, _wtCodeMismatch: false } };\n  }\n\n  const missing = plannedWTCodes.filter(code => !vendorWTCodes.has(code));\n\n  return {\n    json: {\n      ...json,\n      _wtCodeMismatch: missing.length > 0,\n      _wtCodesMissing: missing,\n      _wtCodesVendor: [...vendorWTCodes],\n      _wtCodesPlanned: plannedWTCodes,\n    }\n  };\n});"
+      },
+      "id": "c2060b72-7c6c-4723-861f-191c95450ace",
+      "name": "Validar WTCodes Proveedor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "wtcode-bool-check",
+              "leftValue": "={{ $json._wtCodeMismatch }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "90ba73f3-8073-4a28-bb0c-2bd54bedab69",
+      "name": "WTCodes Coinciden",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ewt-result",
+              "name": "result",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "ewt-tipo",
+              "name": "tipo",
+              "value": "Factura",
+              "type": "string"
+            },
+            {
+              "id": "ewt-cardcode",
+              "name": "CardCode",
+              "value": "={{ $json.body?.value?.[0]?.CardCode ?? $json.nitProveedor }}",
+              "type": "string"
+            },
+            {
+              "id": "ewt-mensaje",
+              "name": "mensaje",
+              "value": "={{ 'Retenciones no coinciden: proveedor ' + (($json._wtCodesVendor ?? []).length === 0 ? 'sin retenciones configuradas' : 'tiene [' + $json._wtCodesVendor.join(', ') + ']') + ' pero la factura intenta enviar [' + ($json._wtCodesPlanned ?? []).join(', ') + ']. Sin configurar: ' + ($json._wtCodesMissing ?? []).join(', ') }}",
+              "type": "string"
+            },
+            {
+              "id": "ewt-supplier",
+              "name": "supplier",
+              "value": "={{ $json.Supplier ?? null }}",
+              "type": "string"
+            },
+            {
+              "id": "ewt-expenseid",
+              "name": "expenseId",
+              "value": "={{ $json.Id ?? null }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0109f204-999a-4e34-a50d-d52e29774e18",
+      "name": "Error WTCode Mismatch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2784,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = [];\nfor (const item of $input.all()) {\n  const ef     = item.json.ExtraFields ?? [];\n  const nit    = item.json.nitProveedor;\n  const nombre = item.json.Supplier;\n\n  const federalTaxID = ef.find(f => f.Name === 'NIT Proveedor')?.Value ?? ef[0]?.Value ?? null;\n  const telefono     = ef.find(f => f.Name === 'Telefono')?.Value ?? null;\n  const direccion    = ef.find(f => f.Name === 'Dirección proveedor')?.Value ?? null;\n  const correo       = ef.find(f => f.Name === 'Correo')?.Value ?? null;\n  const municipio    = ef.find(f => f.Name === 'Municipio proveedor')?.Code ?? null;\n\n  const missing = [];\n  if (!nit)          missing.push('CardCode (nitProveedor)');\n  if (!nombre)       missing.push('CardName (Supplier)');\n  if (!federalTaxID) missing.push('FederalTaxID (NIT Proveedor)');\n  if (!telefono)     missing.push('Phone1 (Telefono)');\n  if (!direccion)    missing.push('Dirección proveedor');\n  if (!correo)       missing.push('EmailAddress (Correo)');\n  if (!municipio)    missing.push('U_HBT_MunMed (Municipio proveedor)');\n\n  result.push({\n    json: {\n      ...item.json,\n      _bpValid:   missing.length === 0,\n      _bpMissing: missing\n    }\n  });\n}\nreturn result;"
+      },
+      "id": "0d888139-a8c7-4e95-8a4e-62331bbf6cca",
+      "name": "Validar Campos Proveedor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "if-bp-valid-check",
+              "leftValue": "={{ $json._bpValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0fdb9dd1-b660-405e-89de-e6def8d92552",
+      "name": "If Campos BP Válidos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1888,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ecbp-result",
+              "name": "result",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "ecbp-tipo",
+              "name": "tipo",
+              "value": "Proveedor",
+              "type": "string"
+            },
+            {
+              "id": "ecbp-nit",
+              "name": "nit",
+              "value": "={{ $json.nitProveedor ?? 'NIT desconocido' }}",
+              "type": "string"
+            },
+            {
+              "id": "ecbp-mensaje",
+              "name": "mensaje",
+              "value": "={{ 'Campos obligatorios faltantes para crear proveedor: ' + ($json._bpMissing ?? []).join(', ') }}",
+              "type": "string"
+            },
+            {
+              "id": "e5da3f29-7524-45f5-a60f-b0bdb3a9c239",
+              "name": "Supplier",
+              "value": "={{ $json.Supplier ?? 'Proveedor desconocido' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "00622c35-bebd-48ee-97e5-2204fbd00968",
+      "name": "Set Error Campos BP",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2128,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/PurchaseInvoices?$filter=NumAtCard eq '{{ $json.numAtCard }}' and CardCode eq '{{ $json.CardCode }}'&$select=DocNum",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('SAP Login').first().json.headers[\"set-cookie\"][0] }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "f7374e19-d905-4377-bd57-535c4f7964af",
+      "name": "SAP GET Factura Existente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3024,
+        -560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ (function () {\n  const esc = s => String(s == null ? '' : s).replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c]);\n  const ui = $('UI estándar').first().json.ui;\n  const r = $('Code Construir Resumen').first().json;\n  let items = [];\n  try { items = $('Aggregate Todos').first().json.items || []; } catch (e) { items = []; }\n  const titulo = String(r.tituloEnvio || 'Resultado del envío');\n  const icono = /fallid/i.test(titulo) ? 'error' : (/error/i.test(titulo) ? 'aviso' : 'exito');\n  const exitos = items.filter(i => i.result === 'success' && i.tipo !== 'Proveedor');\n  const ya = items.filter(i => i.result === 'ya_existia');\n  const errores = items.filter(i => i.result === 'error' && i.tipo !== 'Proveedor');\n  const bpOk = items.filter(i => i.result === 'success' && i.tipo === 'Proveedor');\n  const bpErr = items.filter(i => i.result === 'error' && i.tipo === 'Proveedor');\n  const errIntegracion = $json.statusCode ? 'Error ' + $json.statusCode + ': ' + (Array.isArray($json.message) ? $json.message.map(m => m.message).join('; ') : String($json.message)) : '';\n  const integrada = r.reportIntegrationStatus === 1 && !errIntegracion;\n  const textoIntegracion = r.reportIntegrationStatus === 1 ? (errIntegracion || 'Integrada') : 'No integrada (hay errores sin resolver)';\n  const quien = e => esc(e.supplier || e.Supplier || 'Sin proveedor') + ((e.CardCode || e.nit) ? ' <span class=\"nit\">· NIT ' + esc(e.CardCode || e.nit) + '</span>' : '');\n  const seccion = (clase, nombre, lista, detalle) => lista.length\n    ? '<div class=\"res-seccion ' + clase + '\"><h3>' + nombre + ' <span class=\"cuenta\">' + lista.length + '</span></h3><ul>'\n      + lista.map(e => '<li><strong>' + quien(e) + '</strong><span>' + esc(detalle(e)) + '</span></li>').join('') + '</ul></div>'\n    : '';\n  const chip = (clase, n, txt) => '<div class=\"chip ' + clase + (n ? ' activo' : '') + '\"><b>' + n + '</b>' + txt + '</div>';\n  let html = '<div class=\"status-icon ' + icono + '\">' + ({ exito: '&#10004;', error: '&#10006;', aviso: '!' })[icono] + '</div>'\n    + '<h1>' + esc(titulo) + '</h1>'\n    + '<div class=\"res-contadores\">' + chip('ok', exitos.length, 'creadas') + chip('neutro', ya.length, 'ya existían') + chip('mal', errores.length + bpErr.length, 'con error') + '</div>'\n    + '<div class=\"res-integracion ' + (integrada ? 'ok' : 'mal') + '\">Integración Rindegastos: <b>' + esc(textoIntegracion) + '</b></div>';\n  if (items.length) {\n    html += seccion('mal', 'Errores', errores, e => e.mensaje || 'Error sin detalle')\n      + seccion('mal', 'Socios de negocio con error', bpErr, e => e.mensaje || 'Error sin detalle')\n      + seccion('ok', 'Creadas en SAP', exitos, e => (e.tipo === 'asiento' ? 'Asiento' : 'Factura') + ' SAP #' + (e.DocNum || '—'))\n      + seccion('ok', 'Socios de negocio creados', bpOk, () => 'Creado en SAP')\n      + seccion('neutro', 'Ya existían en SAP', ya, e => 'Factura SAP #' + (e.DocNum || '—') + (e.numAtCard ? ' · ' + e.numAtCard : ''));\n  } else {\n    const texto = String((r.resumen || '') + (r.resumenSocios ? '\\n\\nSocios de negocio:\\n' + r.resumenSocios : '')).trim();\n    html += '<div class=\"mensaje\">' + esc(texto).replace(/\\n/g, '<br>') + '</div>';\n  }\n  return ui.inicio + html\n    + '<a class=\"btn\" href=\"' + ui.urlFormulario + '\">Volver</a>'\n    + '<a class=\"btn-back\" href=\"' + ui.urlSalir + '\">Cerrar sesión</a>' + ui.fin;\n})() }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b3fb9bdd-81f8-4ef9-89f5-413443f11b75",
+      "name": "Form Final",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4672,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dup-check-001",
+                    "leftValue": "={{ $json.result }}",
+                    "rightValue": "ya_existia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ya existía"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "90498614-a755-4e01-b845-957ffff7e94a",
+      "name": "Switch Tipo Resultado",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3024,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docNum = $input.item.json.body?.value?.[0]?.DocNum;\nconst orig = $('Procesar Resultado Factura').item.json;\nreturn {\n  json: {\n    result: 'ya_existia',\n    DocNum: docNum != null ? String(docNum) : null,\n    CardCode: orig.CardCode ?? 'Desconocido',\n    numAtCard: orig.numAtCard ?? '',\n    supplier: orig.supplier ?? '',\n    expenseId: orig.expenseId ?? null\n  }\n};"
+      },
+      "id": "a51d65cd-e036-4f80-a9eb-fb2de5588258",
+      "name": "Code Extraer DocNum Existente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3216,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $input.first().json;\nconst integrables = summary.integrables ?? [];\nif (integrables.length === 0) {\n  return [{ json: { skipped: true } }];\n}\nreturn integrables.map(i => ({\n  json: {\n    expenseId: i.expenseId,\n    docNum: i.docNum ?? '',\n    integrationStatus: i.integrationStatus ?? 1\n  }\n}));"
+      },
+      "id": "990f777a-79f4-489b-aec4-5734d22446a3",
+      "name": "Code Preparar Gastos Para Integracion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.rindegastos.com/v1/setExpenseIntegration",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ Id: $json.expenseId, IntegrationStatus: $json.integrationStatus ?? 1, IntegrationCode: String($json.docNum ?? ''), IntegrationDate: $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm:ss') }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b88a87fc-993a-4e90-8157-96bda9635e83",
+      "name": "Rindegastos setExpenseIntegration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4240,
+        -496
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "kjjfgPhLIXMu1Rdy",
+          "name": "Token auth rindegastos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "expenseResponses",
+        "options": {}
+      },
+      "id": "9bc97c3a-d285-49c5-b395-9cdc6cff2f9a",
+      "name": "Aggregate setExpense Responses",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4464,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prep-fed-tax-001",
+              "name": "federalTaxIDFinal",
+              "value": "={{ $json.nitConDV || $json.nitLimpio || null }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "415feb92-bccb-443a-9382-70a1c1ad837b",
+      "name": "Preparar FederalTaxID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "aa76bd9b-908c-4cf5-ae9b-bb8d17af3289",
+                    "leftValue": "={{ $json.ExtraFields?.find(f => f.Name === 'Tipo de Documento')?.Code }}",
+                    "rightValue": "102",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "5ac83877-c735-4e33-a9fe-e457c2a17120",
+                    "leftValue": "={{ $json.ExtraFields?.find(f => f.Name === 'Tipo de Documento')?.Code }}",
+                    "rightValue": "120",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Factura/CuentaContable"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "755c6116-ef24-4c3a-acd5-42dae570a9d2",
+                    "leftValue": "={{ $json.ExtraFields?.find(f => f.Name === 'Tipo de Documento')?.Value }}",
+                    "rightValue": "Asiento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Asiento"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2bda8c02-b770-4540-8a9d-b7a628c4b99f",
+      "name": "Switch Tipo Gasto",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        928,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sapItems = $input.all();\nconst expItems = $('If Tiene encargadoNit').all();\n\nreturn sapItems.map((sapItem, i) => {\n  const sapJson = sapItem.json;\n  const exp = expItems[i]?.json ?? {};\n  const encargadoNit = exp.encargadoNit;\n  const debitorAccount = sapJson.body?.value?.[0]?.DebitorAccount ?? null;\n\n  if (!debitorAccount) {\n    return { json: { ...exp, _debitorError: 'No se encontró cuenta deudora (DebitorAccount) en SAP para ' + (encargadoNit ?? 'proveedor desconocido') } };\n  }\n\n  const reportId = $('On form submission').first().json['id_informe_de_gastos'];\n  const encargadoNombre = exp.Supplier ?? encargadoNit ?? 'Empleado';\n  const oficina = exp.ExtraFields?.find(f => f.Name === 'Oficina')?.Code;\n  const area    = exp.ExtraFields?.find(f => f.Name === 'Area')?.Code;\n  const net     = parseFloat(exp.Net ?? 0);\n  const issueDate = (exp.IssueDate).split('T')[0] + 'T00:00:00Z';\n\n  const entry = {\n    ReferenceDate: issueDate,\n    Memo: 'Leg No. ' + reportId + ' - ' + exp.Supplier,\n    Reference: 'LEG GAS JUN',\n    Reference2: String(reportId).padStart(10, '0'),\n    TransactionCode: 'LEGA',\n    JournalEntryLines: [\n      { AccountCode: exp.CategoryCode, Debit: net, Credit: 0.0, LineMemo: exp.Note,\n        CostingCode: 'CO', CostingCode2: '6', CostingCode4: oficina, CostingCode5: area, U_HBT_Tercero: encargadoNit },\n      { AccountCode: debitorAccount, Debit: 0.0, Credit: net,\n        LineMemo: encargadoNombre + ' - Reembolso legalizacion ' + exp.Note,\n        ShortName: encargadoNit, ControlAccount: debitorAccount,\n        CostingCode: 'CO', CostingCode2: '6', CostingCode3: null, CostingCode4: oficina, CostingCode5: area,\n        U_HBT_Tercero: encargadoNit, U_HBT_TipMM: '0', U_HBT_Base: 0.0, U_HBT_TarRet: 0.0, U_HBT_ValImpSaludable: 0.0 }\n    ]\n  };\n  return { json: { ...exp, _journalEntry: entry } };\n});"
+      },
+      "id": "4b788b74-9780-4bf2-8915-33fe2898697b",
+      "name": "Code Preparar JournalEntry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/JournalEntries",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('SAP Login').first().json.headers[\"set-cookie\"][0] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._journalEntry) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "18a1886e-2d3f-4e9c-9fc9-d626f45ea907",
+      "name": "SAP JournalEntries CREATE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2672,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst srcItems = $('Code Preparar JournalEntry').all();\n\nfunction parseSapAsientoError(json) {\n  const status = json.statusCode ?? '';\n  const prefix = 'Error' + (status ? ' ' + status : '') + ' al crear asiento en SAP';\n  let body = json.body;\n  if (typeof body === 'string' && body) {\n    try { body = JSON.parse(body); } catch (_) {}\n  }\n  if (body?.error?.message?.value) {\n    return prefix + ': ' + body.error.message.value;\n  }\n  const raw = json.error?.message ?? '';\n  if (raw) return prefix + ': ' + raw;\n  return prefix;\n}\n\nreturn items.map((item, i) => {\n  const json = item.json;\n  const src  = srcItems[i] ?? srcItems[0];\n  const expenseId    = src?.json?.Id ?? null;\n  const encargadoNit = src?.json?.encargadoNit ?? 'Desconocido';\n  const supplier     = src?.json?.Supplier ?? encargadoNit;\n\n  if (json.statusCode === 201) {\n    return { json: {\n      result: 'success',\n      tipo: 'asiento',\n      DocNum: String(json.body?.JdtNum ?? json.body?.DocNum ?? ''),\n      CardCode: encargadoNit,\n      supplier,\n      expenseId\n    }};\n  }\n\n  return { json: {\n    result: 'error',\n    tipo: 'asiento',\n    CardCode: encargadoNit,\n    supplier,\n    expenseId,\n    mensaje: parseSapAsientoError(json)\n  }};\n});"
+      },
+      "id": "71c08a6e-b04b-4db8-b617-c1a195fe9439",
+      "name": "Procesar Resultado Asiento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2864,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-naturaleza-code-1",
+              "leftValue": "={{ $json.ExtraFields.find(f => f.Name === 'Naturaleza persona')?.Code }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "3e148b2d-343b-4dee-a26c-e59f9568fc5f",
+      "name": "IF Persona Natural",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.Supplier }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "nombres",
+              "description": "Primer y/o segundo nombre de la persona (sin apellidos), en MAYÚSCULAS",
+              "required": true
+            },
+            {
+              "name": "apellido1",
+              "description": "Primer apellido de la persona, en MAYÚSCULAS",
+              "required": true
+            },
+            {
+              "name": "apellido2",
+              "description": "Segundo apellido de la persona, en MAYÚSCULAS. Cadena vacía si no tiene segundo apellido."
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Eres un experto en nombres colombianos. El formato típico es: [NOMBRE1] [NOMBRE2] [APELLIDO1] [APELLIDO2]. Los apellidos van al final. Retorna todos los campos en MAYÚSCULAS. Preposiciones (de, del, la) van con el apellido."
+        }
+      },
+      "id": "cacac3aa-fe68-40b6-a3eb-6d555aa85253",
+      "name": "IA Descomponer Nombre",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recuperar item original (con ExtraFields, Supplier, nitProveedor, etc.)\nconst original = $('IF Persona Natural').first().json;\n\n// Campos extraídos por el Information Extractor\nconst nombres   = $('IA Descomponer Nombre').first().json.output?.nombres   ?? '';\nconst apellido1 = $('IA Descomponer Nombre').first().json.output?.apellido1 ?? '';\nconst apellido2 = $('IA Descomponer Nombre').first().json.output?.apellido2 ?? '';\n\n// CardNameSAP: APELLIDO1 APELLIDO2 NOMBRES (formato SAP)\nconst cardNameSAP = [apellido1, apellido2, nombres].filter(Boolean).join(' ');\n\nreturn {\n  ...original,\n  U_HBT_Nombres:   nombres,\n  U_HBT_Apellido1: apellido1,\n  U_HBT_Apellido2: apellido2,\n  CardNameSAP:     cardNameSAP || original.Supplier\n};\n"
+      },
+      "id": "4e08493c-b753-40eb-b089-bb251ff409c8",
+      "name": "Code Merge Nombre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        48
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "da69f81d-b21e-4c14-b0a2-501de58b5562",
+      "name": "Merge Nombre Persona",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2640,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "b3ebc858-71f6-46c8-a7b1-27cdbfc8aac1",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2320,
+        224
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "WBIkPBlNlgHAbJc6",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.rindegastos.com/v2/getExpenseReport?Id={{ $('On form submission').first().json.id_informe_de_gastos }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "id": "0ede2036-6012-466c-812c-bd2ac772c9ea",
+      "name": "Rindegastos getExpenseReport",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -144,
+        0
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "kjjfgPhLIXMu1Rdy",
+          "name": "Token auth rindegastos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f22b702b-e99d-4ea4-a691-a21c3aca1271",
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "Taxis",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "={{ true }}",
+              "outputKey": "Taxis"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "97b89306-ef88-4687-8ed6-e633ca390a18",
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "Peajes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Peajes"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "69fa4a7c-4ba3-4a08-909e-53b98bfcf7e8",
+      "name": "Switch Categoría Asiento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const exp = item.json;\n  const report = $('Rindegastos getExpenseReport').first().json;\n  const identification = report?.ExpenseReports?.Employee?.Identification ?? null;\n  if (!identification) {\n    return { json: { ...exp, encargadoNit: null,\n      _errorAsiento: 'No se pudo crear el asiento: el empleado no tiene número de identificación asociado en Rindegastos' } };\n  }\n  return { json: { ...exp, encargadoNit: 'P' + String(identification) } };\n});"
+      },
+      "id": "f1e02456-af89-4dda-bfd9-98deb4d06304",
+      "name": "Code Enriquecer Asiento Taxis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const exp = item.json;\n  const nitField = (exp.ExtraFields ?? []).find(f => f.Name === 'NIT Proveedor');\n  const nit = nitField?.Value?.trim() ?? null;\n  if (!nit) {\n    return { json: { ...exp, encargadoNit: null,\n      _errorAsiento: 'No se pudo crear el asiento: el gasto no cuenta con un proveedor (NIT) asociado' } };\n  }\n  return { json: { ...exp, encargadoNit: 'P' + nit } };\n});"
+      },
+      "id": "03b4aff9-950c-4783-b39b-d807e253f4f1",
+      "name": "Code Enriquecer Asiento Peajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "15977e63-bc52-4cfb-9f7c-e00738640ccf",
+              "name": "result",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "e3248770-c276-41a6-96f4-59b3b6a2fc09",
+              "name": "tipo",
+              "value": "asiento",
+              "type": "string"
+            },
+            {
+              "id": "d63ab843-5232-4eb4-b4aa-c50502e46bea",
+              "name": "CardCode",
+              "value": "N/A",
+              "type": "string"
+            },
+            {
+              "id": "938f04b6-b387-4986-a3a0-de0359e905c8",
+              "name": "expenseId",
+              "value": "={{ $json.Id ?? null }}",
+              "type": "number"
+            },
+            {
+              "id": "c493b4e0-cf8d-4f53-9ffc-53de1eafb0ac",
+              "name": "supplier",
+              "value": "={{ $json.Supplier ?? 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "d99c63a8-e97b-4fc2-a0a0-18fad741d9d9",
+              "name": "mensaje",
+              "value": "={{ 'Categoría de asiento no soportada: ' + ($json.CategoryName ?? 'desconocida') + '. Solo se procesan Taxis y Peajes.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "48c642b8-1920-48b1-9655-68a8f6cc1567",
+      "name": "Set Error Categoría Asiento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1376,
+        1056
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "804b9500-c3ee-4abc-a5bd-c78cc50434db",
+      "name": "Merge Enriquecido Asiento",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1616,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a231bcb-1515-4f4d-892d-359881f724ff",
+              "leftValue": "={{ $json.encargadoNit }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "47b9e31b-42d1-4c07-bd1a-c839ac3c7e62",
+      "name": "If Tiene encargadoNit",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1824,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "afdafe05-944b-4861-82b2-1b4a5f325b19",
+              "name": "result",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "9afe46ff-c706-45a5-89c4-60af762e75da",
+              "name": "tipo",
+              "value": "asiento",
+              "type": "string"
+            },
+            {
+              "id": "129cd8c2-6a81-4365-bec6-4486728aab82",
+              "name": "CardCode",
+              "value": "={{ $json.encargadoNit ?? 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "312e069e-730c-4b1b-a42a-0e98688324ab",
+              "name": "expenseId",
+              "value": "={{ $json.Id ?? null }}",
+              "type": "number"
+            },
+            {
+              "id": "19b8c77b-bd4b-4528-b1e1-418296eb4ef7",
+              "name": "supplier",
+              "value": "={{ $json.Supplier ?? 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "074dcae9-7a1a-4f6c-b0ea-55b0a099f7ae",
+              "name": "mensaje",
+              "value": "={{ $json._errorAsiento ?? 'No se pudo crear el asiento: proveedor no determinado' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b0fc9877-16e0-4b03-adca-43b43c29ffb1",
+      "name": "Set Error Sin Proveedor Asiento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2080,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/BusinessPartners?$filter=CardCode eq '{{ $json.encargadoNit }}'",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('SAP Login').first().json.headers[\"set-cookie\"][0] }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "05dc86c3-2a63-4220-b347-81cfb78d0a39",
+      "name": "SAP GET DebitorAccount",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2080,
+        688
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e99c0787-aa9d-49c1-ab4d-9490e5adcff1",
+              "leftValue": "={{ $json._journalEntry }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "078a879c-6d8e-4be4-a9ea-39782db0ff8e",
+      "name": "If Tiene DebitorAccount",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2464,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6bcefa54-e7ce-4feb-9ce4-4641a102cdbb",
+              "name": "result",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "0f9c5fb8-6f83-445a-bf93-60b240e66388",
+              "name": "tipo",
+              "value": "asiento",
+              "type": "string"
+            },
+            {
+              "id": "9d5ccf22-3632-4f75-8516-2adf34e3e178",
+              "name": "CardCode",
+              "value": "={{ $json.encargadoNit ?? 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "737f323f-6500-4d30-b4f3-a23ac55811f8",
+              "name": "expenseId",
+              "value": "={{ $json.Id ?? null }}",
+              "type": "number"
+            },
+            {
+              "id": "cf6e3f8a-4356-4485-b7b8-bbfcb76cb538",
+              "name": "supplier",
+              "value": "={{ $json.Supplier ?? 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "4d0f6477-acda-465a-8b97-3d3bdee1034e",
+              "name": "mensaje",
+              "value": "={{ $json._debitorError ?? 'No se encontró cuenta deudora en SAP' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "16e66797-1873-40dd-8b5c-8825ca0a26f0",
+      "name": "Set Error Sin DebitorAccount",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2672,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "7d6580cd-76b4-4db3-98e8-6c051b30a7df",
+      "name": "Merge Asiento Todos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3408,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "428793af-52f5-448d-91b1-2cc08c52d132",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": "200",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "96b1c0c5-2eb9-4491-8dbf-be94d9404668",
+      "name": "If1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('UI estándar').first().json.ui.inicio + (function () { const esc = s => String(s == null ? '' : s).replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c]); const titulo = String(\"Error en la autenticación de SAP\"); const icono = 'error'; return '<div class=\"status-icon ' + icono + '\">' + ({ exito: '&#10004;', error: '&#10006;', aviso: '!' })[icono] + '</div><h1>' + esc(titulo) + '</h1><div class=\"mensaje\">' + esc(String(($json.error.message)).trim()).replace(/\\n/g, '<br>') + '</div><a class=\"btn\" href=\"' + $('UI estándar').first().json.ui.urlFormulario + '\">Volver</a><a class=\"btn-back\" href=\"' + $('UI estándar').first().json.ui.urlSalir + '\">Cerrar sesión</a>'; })() + $('UI estándar').first().json.ui.fin }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5972a3a4-a993-43c8-85c2-9020694986a8",
+      "name": "Form",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('On form submission').first().json.usuario }}",
+                    "rightValue": "manager_finamiga",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ad8a58f4-6665-48e8-bd96-f2ed3ee15475"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "manager_finamiga"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a258a60f-b284-40ad-9a18-56591655e3f5",
+                    "leftValue": "={{ $('On form submission').first().json.usuario }}",
+                    "rightValue": "SIRLEY ARCILA GOMEZ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1d592391-eeea-4a0f-bf36-85a5513c50b2",
+                    "leftValue": "={{ $('On form submission').first().json.usuario }}",
+                    "rightValue": "SORELYS SOLANYI SUAREZ SUAREZ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bb77f3eb-0b81-4042-942b-75a127c1b05f",
+                    "leftValue": "={{ $('On form submission').first().json.usuario }}",
+                    "rightValue": "FIN_SERVICELAYER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6690fbd4-cc3a-4c49-a253-5dff873c41b6",
+      "name": "Switch3",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "alwaysOutputData": false,
+      "position": [
+        560,
+        -752
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vm-hbt-hm35.heinsohncloud.com.co:50000/b1s/v1/Login",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "7137a606-c258-4056-aa21-6d1d308bd9e4",
+      "name": "SAP Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        816,
+        -864
+      ],
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "xoAwuetYmnG2QVWL",
+          "name": "SAP - FIN_SERVICELAYER_PRO"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## LOGIN SAP\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)"
+      },
+      "id": "2e4ce44e-21fd-4825-b8a6-b968769116fb",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -752
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CREACIÓN DE FLA, DSU\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)"
+      },
+      "id": "c6a75447-22e4-4d61-b3fc-d72f6df05056",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2032,
+        -592
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CREACIÓN DE ASIENTOS\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)"
+      },
+      "id": "570490f4-cd2a-4672-8e5e-bb77c958db6f",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CREACIÓN DE SOCIO DE NEGOCIO\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)"
+      },
+      "id": "e12248de-2b57-4f5d-8769-8b31d7550bc9",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2912,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e329defa-1e34-45a0-a216-5261046cc705",
+              "name": "result",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "855204c0-25bd-4832-8470-8333d9bf712d",
+              "name": "tipo",
+              "value": "Proveedor",
+              "type": "string"
+            },
+            {
+              "id": "530c187a-f691-46d1-8a50-c6bfac64ea19",
+              "name": "nit",
+              "value": "={{ $json.nitProveedor ?? $json.body?.CardCode ?? 'NIT desconocido' }}",
+              "type": "string"
+            },
+            {
+              "id": "919a9560-032c-436f-a1b3-33cbcac200ca",
+              "name": "CardCode",
+              "value": "={{ $json.body?.CardCode ?? $json.nitProveedor }}",
+              "type": "string"
+            },
+            {
+              "id": "1ab93e61-b3fd-4309-8766-aeabb98dae81",
+              "name": "Supplier",
+              "value": "={{ $json.Supplier ?? $json.body?.CardName ?? 'Proveedor desconocido' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "969bc5a7-1983-4eab-a5b9-41465caae6c4",
+      "name": "Set Success BP",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2384,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔐 Acceso con Microsoft 365 (login estándar, issue #389)\n**Enlace para los usuarios:** `/webhook/rindegastos-sap`\n\n- **Webhook Formulario** (GET) y **Webhook Enviar** (POST) pasan por **Auth: verificar sesión**: cookie `rg_sesion` o campo oculto `_sesion` (los envíos llegan sin cookies por el *sandbox* de n8n).\n- Sin sesión → **Login Microsoft 365** (`/webhook/acceso-m365?app=rindegastos`) → Microsoft → vuelve al formulario.\n- **UI estándar**: estilos de marca, banner con el usuario y *Cerrar sesión*, formulario. Fuente única `n8n_ui/ui_estandar.js` (no editar a mano).\n- **On form submission** (Set) entrega los mismos campos que el Form anterior: la lógica no cambia.\n- Login y configuración de la app (client id, duración de la sesión): flujo **Login Microsoft 365** → *Registro de aplicaciones* → `rindegastos`.",
+        "height": 820,
+        "width": 1460,
+        "color": 6
+      },
+      "id": "e17333f5-05d2-4ced-9b2b-f6f83532d483",
+      "name": "Nota · Acceso Microsoft 365",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1744,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "path": "rindegastos-sap",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4705c644-a73d-45d0-9017-233b9b2ae79c",
+      "name": "Webhook Formulario",
+      "webhookId": "c081467f-951b-4080-bf27-e7f1e84fc164",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1680,
+        -128
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rindegastos-sap-enviar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "95c1c892-870d-4db7-a41e-0f791c6d0156",
+      "name": "Webhook Enviar",
+      "webhookId": "d0d5c696-0d42-432e-b2c0-c85b994f580f",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1680,
+        128
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1yD3JSYX8nMJqeID",
+          "cachedResultName": "Login Microsoft 365",
+          "cachedResultUrl": "/workflow/1yD3JSYX8nMJqeID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "operacion": "verificarSesion",
+            "app": "rindegastos",
+            "redirectUri": "",
+            "cookies": "={{ $json.headers.cookie ?? '' }}",
+            "query": "={{ JSON.parse('{}') }}",
+            "tokenSesion": "={{ $json.body ? String($json.body._sesion || '') : '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "operacion",
+              "displayName": "operacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "app",
+              "displayName": "app",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "redirectUri",
+              "displayName": "redirectUri",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cookies",
+              "displayName": "cookies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "tokenSesion",
+              "displayName": "tokenSesion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c2ee8ab8-154d-4d36-937e-744be8934bfe",
+      "name": "Auth: verificar sesión",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -1472,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// <ui-estandar> Interfaz estándar de los formularios n8n de UNI2 (issue #389).\n// Fuente única: n8n_ui/ui_estandar.js. Los scripts build_*.py la copian en el nodo \"UI estándar\"\n// de cada flujo: no editar a mano dentro de n8n.\n// Patrones de marca tomados de Reconstruye y del Extractor: naranja UNI2, Nunito, barra con el logo\n// de Finamiga, tarjeta centrada, botones redondeados y pantalla \"Procesando…\".\n// Seguridad: todo texto dinámico pasa por esc(); los formularios llevan el campo oculto de sesión.\n\nconst UI_ESTILOS = `<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link href=\"https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap\" rel=\"stylesheet\">\n<style>\n:root{--naranja:#f08a24;--naranja-osc:#d97316;--naranja-suave:rgba(240,138,36,.14);--texto:#3b3b3b;--texto-suave:#6e6e6e;--borde:#cfd2d6;--linea:#ececec;--fondo:#f4f5f7;--blanco:#fff;--error:#e5484d;--exito:#2f9e62;}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}\nhtml{-webkit-text-size-adjust:100%;}\nbody{min-height:100vh;display:flex;flex-direction:column;background:var(--fondo);font-family:'Nunito','Open Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;color:var(--texto);}\n.env-banner{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 12px;padding:10px 16px;background:var(--naranja);color:#1f1f1f;font-size:13px;font-weight:800;letter-spacing:.4px;text-align:center;}\n.env-banner .sep{opacity:.55;}\n.env-banner .usuario{font-weight:700;}\n.env-banner a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;}\n.navbar{background:var(--blanco);box-shadow:0 1px 6px rgba(0,0,0,.07);padding:14px 16px;display:flex;justify-content:center;}\n.navbar img{height:44px;display:block;}\n.container{width:100%;max-width:480px;margin:auto;padding:32px 16px;}\n.container.ancho{max-width:760px;}\n.card{background:var(--blanco);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.06);padding:32px 28px;}\n.card h1{font-size:22px;font-weight:700;color:var(--texto);text-align:center;margin-bottom:6px;}\n.card p{color:var(--texto-suave);line-height:1.6;text-align:center;}\n.card p.descripcion{margin-bottom:6px;}\nform{display:flex;flex-direction:column;}\nlabel{align-self:flex-start;position:relative;z-index:1;top:9px;margin:14px 0 0 12px;padding:0 6px;background:var(--blanco);font-size:13px;font-weight:600;color:var(--texto-suave);}\ninput,select,textarea{width:100%;height:50px;border:1px solid var(--borde);border-radius:6px;padding:0 14px;font:inherit;color:var(--texto);background-color:var(--blanco);transition:border-color .15s,box-shadow .15s;}\ntextarea{height:110px;padding:14px;resize:vertical;}\ninput[type=file]{height:auto;padding:12px 14px;}\nselect{appearance:none;-webkit-appearance:none;padding-right:42px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e6e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 16px center;}\ninput:focus,select:focus,textarea:focus{outline:none;border-color:var(--naranja);box-shadow:0 0 0 3px var(--naranja-suave);}\n.hint{font-size:12px;color:var(--texto-suave);margin:6px 2px 0;text-align:left!important;}\nbutton{margin-top:28px;height:48px;border:none;border-radius:24px;background:var(--naranja);color:#fff;font:inherit;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s,transform .05s;}\nbutton:hover{background:var(--naranja-osc);}\nbutton:active{transform:translateY(1px);}\nbutton:disabled{opacity:.65;cursor:not-allowed;}\n.btn{display:block;margin-top:24px;height:48px;line-height:48px;border-radius:24px;background:var(--naranja);color:#fff;text-align:center;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:background .15s;}\n.btn:hover{background:var(--naranja-osc);}\n.btn-back{display:block;margin-top:12px;height:48px;line-height:46px;border:1.5px solid var(--naranja);border-radius:24px;color:var(--naranja);background:transparent;text-align:center;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:background .15s;}\n.btn-back:hover{background:var(--naranja-suave);}\n.status-icon{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;color:#fff;}\n.status-icon.exito{background:var(--exito);}\n.status-icon.error{background:var(--error);}\n.status-icon.aviso{background:var(--naranja);}\n.mensaje{background:var(--fondo);border-radius:8px;padding:14px 16px;margin-top:16px;font-size:14px;line-height:1.7;text-align:left!important;word-break:break-word;color:var(--texto)!important;}\n.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:girar .8s linear infinite;vertical-align:-3px;margin-right:8px;}\n@keyframes girar{to{transform:rotate(360deg);} }\n.overlay{position:fixed;inset:0;background:rgba(244,245,247,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;font-weight:700;color:var(--texto);}\n.overlay.show{display:flex;}\n.overlay .spinner{width:38px;height:38px;border-width:3px;border-color:var(--naranja-suave);border-top-color:var(--naranja);margin:0;}\n.alerta{border-radius:8px;padding:12px 14px;margin:16px 0 4px;font-size:14px;line-height:1.5;text-align:left;}\n.alerta.error{background:rgba(229,72,77,.10);border:1px solid rgba(229,72,77,.35);color:#b42318;}\n.res-contadores{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 12px;}\n.chip{border-radius:10px;padding:12px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--texto-suave);background:var(--fondo);border:1px solid var(--linea);}\n.chip b{display:block;font-size:24px;line-height:1.1;font-weight:800;}\n.chip.ok b{color:var(--exito);}.chip.mal b{color:var(--error);}.chip.neutro b{color:var(--texto-suave);}\n.chip.ok.activo{background:rgba(47,158,98,.08);border-color:rgba(47,158,98,.35);}\n.chip.mal.activo{background:rgba(229,72,77,.08);border-color:rgba(229,72,77,.35);}\n.res-integracion{border-radius:8px;padding:10px 14px;font-size:14px;text-align:center;margin-bottom:6px;}\n.res-integracion.ok{background:rgba(47,158,98,.10);color:#1e7a4a;}\n.res-integracion.mal{background:rgba(229,72,77,.10);color:#b42318;}\n.res-seccion{margin-top:16px;border:1px solid var(--linea);border-left:4px solid var(--borde);border-radius:8px;padding:12px 14px;text-align:left;}\n.res-seccion.ok{border-left-color:var(--exito);}.res-seccion.mal{border-left-color:var(--error);}.res-seccion.neutro{border-left-color:#9aa0a6;}\n.res-seccion h3{font-size:14px;font-weight:800;color:var(--texto);margin-bottom:6px;display:flex;align-items:center;gap:8px;}\n.res-seccion .cuenta{background:var(--fondo);border-radius:10px;padding:1px 8px;font-size:12px;color:var(--texto-suave);}\n.res-seccion ul{list-style:none;}\n.res-seccion li{padding:8px 0;border-top:1px solid var(--linea);font-size:14px;line-height:1.5;word-break:break-word;}\n.res-seccion li:first-child{border-top:none;}\n.res-seccion li strong{display:block;font-weight:700;color:var(--texto);}\n.res-seccion li span{display:block;color:var(--texto-suave);}\n.res-seccion li strong .nit{display:inline;font-weight:600;color:var(--texto-suave);font-size:13px;}\n@media (max-width:600px){.res-contadores{gap:6px;}.chip{padding:10px 4px;font-size:12px;}.chip b{font-size:20px;}}\n.card ul.consejos{list-style:none;margin-top:12px;color:var(--texto-suave);line-height:1.6;text-align:center;}\n.card .detalle-tecnico{margin-top:14px;font-size:12px;color:#9a9a9a;word-break:break-word;}\n@media (max-width:600px){.navbar img{height:36px;}.container{padding:20px 12px;}.card{padding:24px 18px;border-radius:10px;}.card h1{font-size:19px;}.env-banner{font-size:12px;}.env-banner .sep{display:none;}}\n</style>`;\n\nconst UI_LOGO = 'https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg';\n\n// Muestra \"Procesando…\" al enviar un formulario o seguir un botón, y evita el doble envío.\nconst UI_SCRIPT = `<div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn,a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script>`;\n\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\n\n// Banner con el nombre de la aplicación, el usuario autenticado y \"Cerrar sesión\"\nfunction uiBanner(app, usuario, urlSalir) {\n  return '<div class=\"env-banner\"><span>' + esc(app) + '</span>'\n    + (usuario ? '<span class=\"sep\">|</span><span class=\"usuario\">' + esc(usuario) + '</span>' : '')\n    + (urlSalir ? '<a href=\"' + esc(urlSalir) + '\">Cerrar sesión</a>' : '') + '</div>';\n}\n\n// Partes fijas de la página: inicio (hasta abrir la tarjeta) y fin (cierre + \"Procesando…\")\nfunction uiMarco({ titulo, app, usuario, urlSalir, ancho = false }) {\n  return {\n    inicio: '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">'\n      + '<title>' + esc(titulo) + '</title>' + UI_ESTILOS + '</head><body>' + uiBanner(app, usuario, urlSalir)\n      + '<div class=\"navbar\"><img src=\"' + UI_LOGO + '\" alt=\"Finamiga\"></div><div class=\"container' + (ancho ? ' ancho' : '') + '\"><div class=\"card\">',\n    fin: '</div></div>' + UI_SCRIPT + '</body></html>',\n  };\n}\n\n// Formulario a partir de una lista de campos.\n// campo: { nombre, etiqueta, tipo: 'text'|'number'|'password'|'email'|'date'|'select'|'textarea'|'file',\n//          requerido, opciones: [texto | {valor, texto}], valor, placeholder, ayuda, aceptar (tipos de archivo),\n//          patron (regex HTML, p. ej. '\\\\d{8}'), mensajePatron, longitud (máx. caracteres), teclado ('numeric'…) }\n// error: mensaje que se muestra arriba del formulario (p. ej. validación del servidor).\n// La validación del navegador (patron) es solo ayuda: el flujo siempre debe validar de nuevo.\nfunction uiFormulario({ titulo, descripcion, accion, campos, boton = 'Enviar', campoSesion = '', error = '' }) {\n  const conArchivo = campos.some((c) => c.tipo === 'file');\n  let html = '<h1>' + esc(titulo) + '</h1>' + (descripcion ? '<p class=\"descripcion\">' + esc(descripcion) + '</p>' : '')\n    + (error ? '<div class=\"alerta error\">' + esc(error) + '</div>' : '')\n    + '<form method=\"POST\" action=\"' + esc(accion) + '\"' + (conArchivo ? ' enctype=\"multipart/form-data\"' : '') + '>' + campoSesion;\n  for (const c of campos) {\n    const id = 'f_' + String(c.nombre).replace(/[^A-Za-z0-9_]/g, '_');\n    const req = c.requerido ? ' required' : '';\n    html += '<label for=\"' + id + '\">' + esc(c.etiqueta) + '</label>';\n    if (c.tipo === 'select') {\n      html += '<select name=\"' + esc(c.nombre) + '\" id=\"' + id + '\"' + req + '>';\n      for (const o of c.opciones || []) {\n        const valor = typeof o === 'object' ? o.valor : o;\n        const texto = typeof o === 'object' ? o.texto : o;\n        html += '<option value=\"' + esc(valor) + '\"' + (String(valor) === String(c.valor ?? '') ? ' selected' : '') + '>' + esc(texto) + '</option>';\n      }\n      html += '</select>';\n    } else if (c.tipo === 'textarea') {\n      html += '<textarea name=\"' + esc(c.nombre) + '\" id=\"' + id + '\"' + req + (c.placeholder ? ' placeholder=\"' + esc(c.placeholder) + '\"' : '') + '>' + esc(c.valor ?? '') + '</textarea>';\n    } else {\n      html += '<input type=\"' + esc(c.tipo || 'text') + '\" name=\"' + esc(c.nombre) + '\" id=\"' + id + '\"' + req\n        + (c.valor != null && c.tipo !== 'file' && c.tipo !== 'password' ? ' value=\"' + esc(c.valor) + '\"' : '')\n        + (c.placeholder ? ' placeholder=\"' + esc(c.placeholder) + '\"' : '')\n        + (c.patron ? ' pattern=\"' + esc(c.patron) + '\"' : '')\n        + (c.mensajePatron ? ' title=\"' + esc(c.mensajePatron) + '\"' : '')\n        + (c.longitud ? ' maxlength=\"' + Number(c.longitud) + '\"' : '')\n        + (c.teclado ? ' inputmode=\"' + esc(c.teclado) + '\"' : '')\n        + (c.aceptar ? ' accept=\"' + esc(c.aceptar) + '\"' : '') + ' autocomplete=\"off\">';\n    }\n    if (c.ayuda) html += '<p class=\"hint\">' + esc(c.ayuda) + '</p>';\n  }\n  return html + '<button type=\"submit\">' + esc(boton) + '</button></form>';\n}\n// </ui-estandar>\n\n// ------------------------------------------------------------ Rindegastos SAP\nconst APP = 'Rindegastos SAP';\nconst URL_FORMULARIO = 'https://uni2.app.n8n.cloud/webhook/rindegastos-sap';\nconst URL_ENVIAR = 'https://uni2.app.n8n.cloud/webhook/rindegastos-sap-enviar';\nconst URL_ACCESO = 'https://uni2.app.n8n.cloud/webhook/acceso-m365?app=rindegastos';\nconst URL_SALIR = URL_ACCESO + '&salir=1';\n\nconst sesion = $input.first().json; // salida de \"Auth: verificar sesión\"\nlet esEnvio = false;\ntry { esEnvio = $('Webhook Enviar').isExecuted; } catch (e) { esEnvio = false; }\n\nconst datos = esEnvio ? ($('Webhook Enviar').first().json.body || {}) : {};\n\n// Validación del servidor (la del navegador se puede saltar): el ID de informe tiene 8 dígitos.\n// Si no es válido se vuelve a mostrar el formulario y no se consulta Rindegastos ni SAP.\nconst idInforme = String(datos.id_informe_de_gastos ?? '').trim();\nconst ID_VALIDO = /^\\d{8}$/;\n\n// Salidas de \"Ruta\": 0 mostrar formulario, 1 procesar envío, 2 sin sesión\nlet salida = !sesion.ok ? 2 : (esEnvio ? 1 : 0);\nlet errorFormulario = '';\nif (salida === 1 && !ID_VALIDO.test(idInforme)) {\n  salida = 0;\n  errorFormulario = 'El ID de informe debe tener exactamente 8 dígitos (por ejemplo 14349805). No se envió nada a SAP.';\n}\nconst usuario = sesion.ok ? sesion.usuario.email : '';\nconst marco = uiMarco({ titulo: 'Rindegastos - SAP', app: APP, usuario, urlSalir: URL_SALIR });\nconst marcoAncho = uiMarco({ titulo: 'Rindegastos - SAP', app: APP, usuario, urlSalir: URL_SALIR, ancho: true });\n\nconst formulario = salida !== 0 ? '' : marco.inicio + uiFormulario({\n  titulo: 'Rindegastos - SAP',\n  accion: URL_ENVIAR,\n  campoSesion: sesion.campoOculto,\n  boton: 'Enviar a SAP',\n  error: errorFormulario,\n  campos: [\n    { nombre: 'usuario', etiqueta: 'Usuario de SAP', tipo: 'select', requerido: true, opciones: ['FIN_SERVICELAYER'], valor: 'FIN_SERVICELAYER' },\n    { nombre: 'id_informe_de_gastos', etiqueta: 'ID de informe en Rindegastos', tipo: 'text', requerido: true,\n      patron: '\\\\d{8}', longitud: 8, teclado: 'numeric', mensajePatron: 'Debe tener exactamente 8 dígitos',\n      placeholder: 'Ej.: 14349805', ayuda: 'Número de 8 dígitos del informe en Rindegastos.',\n      valor: errorFormulario ? idInforme : undefined },\n  ],\n}) + marco.fin;\n\nreturn [{\n  json: {\n    salida,\n    datos,\n    ui: { formulario, inicio: marcoAncho.inicio, fin: marcoAncho.fin, urlFormulario: URL_FORMULARIO, urlSalir: URL_SALIR },\n  },\n}];\n"
+      },
+      "id": "d16d5652-f150-4af5-a57f-bec222751501",
+      "name": "UI estándar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ $json.salida }}"
+      },
+      "id": "cc67b487-4030-4a23-813f-a46d3cc2d7dc",
+      "name": "Ruta",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1024,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.ui.formulario }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "1e173f52-5388-4bb3-b7e9-2e7aa504e243",
+      "name": "Respond Formulario",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -800,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "44ced278-abbe-4054-abb0-f651c0cc5b1d",
+              "name": "usuario",
+              "type": "string",
+              "value": "={{ $json.datos.usuario }}"
+            },
+            {
+              "id": "1a782051-9735-4e75-99ab-c12d4586aa89",
+              "name": "id_informe_de_gastos",
+              "type": "string",
+              "value": "={{ String($json.datos.id_informe_de_gastos ?? '').trim() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "103a8a96-d131-4e82-853b-9d70c9c947db",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 303,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Location",
+                "value": "https://uni2.app.n8n.cloud/webhook/acceso-m365?app=rindegastos"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "0d1aa5ff-f3a4-47da-a9e5-b983577f2229",
+      "name": "Respond Iniciar sesión",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -800,
+        208
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Switch Tipo Gasto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge Antes Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dedup NITs para Crear",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Datos BP",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Se han realizado multiple peticiones a la misma API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No se encontraron gastos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se han realizado multiple peticiones a la misma API": {
+      "main": [
+        []
+      ]
+    },
+    "Agrega el nitProveedor": {
+      "main": [
+        [
+          {
+            "node": "Tomar los nits unicos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tomar los nits unicos": {
+      "main": [
+        [
+          {
+            "node": "SAP BusinessPartners? filter by NIT Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge Datos BP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error BP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Validar WTCodes Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rindegastos getExpenses?ReportId": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAP BusinessPartners? filter by NIT Proveedor": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAP BusinessPartners CREATE": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAP PurchaseInvoices CREATE": {
+      "main": [
+        [
+          {
+            "node": "Procesar Resultado Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error BP": {
+      "main": [
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Code Construir Resumen": {
+      "main": [
+        [
+          {
+            "node": "If2 Hay Exitos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2 Hay Exitos": {
+      "main": [
+        [
+          {
+            "node": "Code Preparar Gastos Para Integracion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rindegastos setExpenseReportIntegration": {
+      "main": [
+        [
+          {
+            "node": "Form Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Todos": {
+      "main": [
+        [
+          {
+            "node": "Code Construir Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Datos BP": {
+      "main": [
+        [
+          {
+            "node": "Merge Antes Switch2",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Set Success BP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Resultado Factura": {
+      "main": [
+        [
+          {
+            "node": "Switch Tipo Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedup NITs para Crear": {
+      "main": [
+        [
+          {
+            "node": "Preparar FederalTaxID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Resultados": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Todos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Antes Switch2": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar WTCodes Proveedor": {
+      "main": [
+        [
+          {
+            "node": "WTCodes Coinciden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WTCodes Coinciden": {
+      "main": [
+        [
+          {
+            "node": "SAP PurchaseInvoices CREATE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error WTCode Mismatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error WTCode Mismatch": {
+      "main": [
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Campos Proveedor": {
+      "main": [
+        [
+          {
+            "node": "If Campos BP Válidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Campos BP Válidos": {
+      "main": [
+        [
+          {
+            "node": "IF Persona Natural",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Campos BP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Campos BP": {
+      "main": [
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Switch Tipo Resultado": {
+      "main": [
+        [
+          {
+            "node": "SAP GET Factura Existente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "SAP GET Factura Existente": {
+      "main": [
+        [
+          {
+            "node": "Code Extraer DocNum Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Extraer DocNum Existente": {
+      "main": [
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Code Preparar Gastos Para Integracion": {
+      "main": [
+        [
+          {
+            "node": "Rindegastos setExpenseIntegration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rindegastos setExpenseIntegration": {
+      "main": [
+        [
+          {
+            "node": "Aggregate setExpense Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate setExpense Responses": {
+      "main": [
+        [
+          {
+            "node": "Rindegastos setExpenseReportIntegration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar FederalTaxID": {
+      "main": [
+        [
+          {
+            "node": "Validar Campos Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Tipo Gasto": {
+      "main": [
+        [
+          {
+            "node": "Agrega el nitProveedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch Categoría Asiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Preparar JournalEntry": {
+      "main": [
+        [
+          {
+            "node": "If Tiene DebitorAccount",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAP JournalEntries CREATE": {
+      "main": [
+        [
+          {
+            "node": "Procesar Resultado Asiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Resultado Asiento": {
+      "main": [
+        [
+          {
+            "node": "Merge Asiento Todos",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "IF Persona Natural": {
+      "main": [
+        [
+          {
+            "node": "IA Descomponer Nombre",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Nombre Persona",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "IA Descomponer Nombre": {
+      "main": [
+        [
+          {
+            "node": "Code Merge Nombre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Code Merge Nombre": {
+      "main": [
+        [
+          {
+            "node": "Merge Nombre Persona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Nombre Persona": {
+      "main": [
+        [
+          {
+            "node": "SAP BusinessPartners CREATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Descomponer Nombre",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rindegastos getExpenseReport": {
+      "main": [
+        [
+          {
+            "node": "Rindegastos getExpenses?ReportId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Categoría Asiento": {
+      "main": [
+        [
+          {
+            "node": "Code Enriquecer Asiento Taxis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code Enriquecer Asiento Peajes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Categoría Asiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Enriquecer Asiento Taxis": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriquecido Asiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Enriquecer Asiento Peajes": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriquecido Asiento",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Error Categoría Asiento": {
+      "main": [
+        [
+          {
+            "node": "Merge Asiento Todos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Enriquecido Asiento": {
+      "main": [
+        [
+          {
+            "node": "If Tiene encargadoNit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Tiene encargadoNit": {
+      "main": [
+        [
+          {
+            "node": "SAP GET DebitorAccount",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Sin Proveedor Asiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Sin Proveedor Asiento": {
+      "main": [
+        [
+          {
+            "node": "Merge Asiento Todos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "SAP GET DebitorAccount": {
+      "main": [
+        [
+          {
+            "node": "Code Preparar JournalEntry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Tiene DebitorAccount": {
+      "main": [
+        [
+          {
+            "node": "SAP JournalEntries CREATE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Sin DebitorAccount",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Sin DebitorAccount": {
+      "main": [
+        [
+          {
+            "node": "Merge Asiento Todos",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Asiento Todos": {
+      "main": [
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Tomar los nits unicos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch3": {
+      "main": [
+        [],
+        [],
+        [],
+        [
+          {
+            "node": "SAP Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAP Login": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Success BP": {
+      "main": [
+        [
+          {
+            "node": "Merge Resultados",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "Webhook Formulario": {
+      "main": [
+        [
+          {
+            "node": "Auth: verificar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Enviar": {
+      "main": [
+        [
+          {
+            "node": "Auth: verificar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: verificar sesión": {
+      "main": [
+        [
+          {
+            "node": "UI estándar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UI estándar": {
+      "main": [
+        [
+          {
+            "node": "Ruta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruta": {
+      "main": [
+        [
+          {
+            "node": "Respond Formulario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "On form submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Iniciar sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Rindegastos getExpenseReport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "d4606872-312c-4a19-81e8-751e9314eba4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "150c3cb1febd31c154225e14a4f0d222a22a3b7f69666ab64dd444fe9769d7dc"
+  },
+  "nodeGroups": [],
+  "id": "OtyruCQv37g4mnlH",
+  "tags": []
+}

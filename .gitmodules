@@ -1,0 +1,6 @@
+[submodule "n8n-mcp"]
+	path = n8n-mcp
+	url = https://github.com/czlonkowski/n8n-mcp.git
+[submodule "n8n-skills"]
+	path = n8n-skills
+	url = https://github.com/czlonkowski/n8n-skills.git

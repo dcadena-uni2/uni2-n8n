@@ -1,0 +1,2576 @@
+{
+  "name": "Reconstruye (dev - SSO #374)",
+  "nodes": [
+    {
+      "id": "dac80666-5162-45c6-a09c-7291ec229db7",
+      "name": "Webhook A - Servir formulario documento",
+      "webhookId": "e127ec46-5081-4a3c-b93a-caff582e6126",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        -1008,
+        0
+      ],
+      "parameters": {
+        "path": "reconstruye-dev",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "fb901139-1ef1-4d56-ae19-eebcb6032e7f",
+      "name": "Respond Pagina 1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1312,
+        -304
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang='es'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>{{ $('Contexto final').first().json.ctx.tituloPrefijo }}Creación solicitud - Reconstruye</title>\n    {{ $('Contexto final').first().json.ctx.estilos }}\n</head><body>{{ $('Contexto final').first().json.ctx.bannerHtml }}<div class='navbar'><img src='https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg' alt='Finamiga'></div><div class='container'>\n<div class='card'>\n  <h1>Creación solicitud - Reconstruye</h1>\n  <form method='POST' action='{{ $('Contexto final').first().json.ctx.urls.creditos }}'>{{ $('Contexto final').first().json.ctx.campoSesion }}\n    <label for='tipo_documento'>Tipo documento</label>\n    <select name='tipo_documento' id='tipo_documento' required>\n      <option value='CC'>CC</option>\n      <option value='CE'>CE</option>\n      <option value='NIT'>NIT</option>\n    </select>\n    <label for='numero_documento'>Número de documento</label>\n    <input type='text' name='numero_documento' id='numero_documento' required>\n    <button type='submit'>Continuar</button>\n  </form>\n</div>\n</div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "07ac8745-e742-470b-89b0-eb740ce3a8d4",
+      "name": "Webhook B - Recibir documento",
+      "webhookId": "4dbc86d6-e1fe-4ed9-988d-0dce1b5d89d0",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        -1008,
+        208
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reconstruye-dev-creditos-activos",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "8a1125b5-d7b0-4eba-9157-71566425ca23",
+      "name": "Validar tipo documento",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "position": [
+        1312,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zNxikoekjqD98VPw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT tipo_identificacion FROM personas WHERE numero_identificacion = $1",
+            "params": "={{ $json.body.numero_documento }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "e0b62ea0-c3e5-4dd8-abb5-9d30baefc731",
+      "name": "IF Tipo Documento Valido",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1520,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1056dd04-6075-444b-a04a-34a4b6b62f5c",
+              "leftValue": "={{ $json.tipo_identificacion }}",
+              "rightValue": "={{ $('Webhook B - Recibir documento').item.json.body.tipo_documento }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bf3fad61-e66f-4b9f-96ca-e150b3f8fc12",
+      "name": "Set Error Tipo Documento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        208
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "87569142-38d1-4d33-aa1f-0b718c0a91ca",
+              "name": "mensaje",
+              "value": "El tipo de documento no coincide con el registrado para este cliente.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "22c2d6c7-c778-4df5-8b19-13a2d2449d1a",
+      "name": "Buscar solicitud existente",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "position": [
+        1744,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT s.*, c.saldo_prestamo,\n       s2.id AS subproducto_actual_id, s2.name AS subproducto_actual_nombre,\n       s2.producto_id AS producto_id_actual, p.name AS producto_nombre,\n       EXISTS (SELECT 1 FROM solicitud_negocio sn WHERE sn.solicitud_id = s.id) AS tiene_negocio,\n       EXISTS (SELECT 1 FROM solicitud_referencias sr WHERE sr.solicitud_id = s.id) AS tiene_referencias,\n       EXISTS (SELECT 1 FROM solicitud_analisis sa WHERE sa.solicitud_id = s.id) AS tiene_analisis,\n       EXISTS (\n         SELECT 1 FROM solicitud_documentos sd\n         WHERE sd.solicitud_id = s.id\n         AND sd.solicitud_tipo_documento_id IN (1,2,3,4,5,6,11,12,13,14,15,16,17,18,19,26,27,33,34,40,41,42,45,47,49,50)\n       ) AS tiene_documentos,\n       NOT EXISTS (\n         SELECT 1\n         FROM solicitudes s_rec\n         JOIN subproductos sp_rec ON sp_rec.id = s_rec.subproducto_id\n         WHERE s_rec.persona_id = s.persona_id\n         AND sp_rec.name ILIKE '%RECONSTRUYE%'\n       ) AS sin_reconstruye_previo\n       ,TRIM(CONCAT_WS(' ', pe.primer_nombre, pe.segundo_nombre, pe.primer_apellido, pe.segundo_apellido)) AS cliente_nombre\nFROM cartera c\nJOIN solicitudes s ON s.codigo_gyg = c.num_credito\nJOIN subproductos s2 ON s2.id = s.subproducto_id\nJOIN productos p ON p.id = s2.producto_id\nJOIN personas pe ON pe.id = s.persona_id\nWHERE c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')\nAND c.cedula_cliente = $1\nORDER BY c.fecha_credito DESC",
+            "params": "={{ $('Webhook B - Recibir documento').item.json.body.numero_documento }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "a1e4db45-3119-44bf-8586-57aec7788664",
+      "name": "IF Existe Solicitud Elegible",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2192,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "24dca336-c42f-4610-9a1d-cbd5b841ea2b",
+              "leftValue": "={{ $json.elegible }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "724126f6-e5d9-4768-a0f5-cd52f25aa580",
+      "name": "Buscar lineas de credito disponibles",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        1744,
+        640
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT s2.id AS subproducto_id, s2.name AS subproducto_nombre,\n       $2::integer AS solicitud_anterior_id, $3::numeric AS saldo_prestamo\nFROM subproductos s2\nWHERE s2.producto_id = $1\nAND s2.name ILIKE '%RECONSTRUYE%'\nAND s2.id <> $4\nORDER BY s2.name",
+            "params": "={{ $json.producto_id_actual }},{{ $json.id }},{{ $json.saldo_prestamo }},{{ $json.subproducto_actual_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "feca91a1-87c3-4c8f-a5c1-116318c404de",
+      "name": "IF Hay Lineas Disponibles",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1968,
+        640
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bd40476f-ab8a-4412-9e0d-d7f93c7aca69",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b46fc854-08ef-4324-aff6-fb396ab314fd",
+      "name": "Set Error Sin Lineas Disponibles",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1968,
+        848
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "991088d8-0231-44f5-aa7b-562500786d69",
+              "name": "mensaje",
+              "value": "No hay otras líneas RECONSTRUYE disponibles para este cliente.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "56a74d82-6838-4799-b3c0-78391caf1378",
+      "name": "Code Construir Pagina 3 - Linea de Credito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        640
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto final').first().json.ctx;\nconst opciones = $input.all().map(i => i.json);\n\nconst formatMoney = (n) => {\n  const num = Math.round(Number(n) || 0);\n  return num.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');\n};\n\nconst optionsHtml = opciones.map(o =>\n  `<option value=\"${o.subproducto_id}:${o.solicitud_anterior_id}\">${o.subproducto_nombre} - $${formatMoney(o.saldo_prestamo)}</option>`\n).join('');\n\nconst webhookB2 = $('Webhook B2 - Recibir credito seleccionado').first().json;\n\nconst css = `\n    ${ctx.estilos}\n`;\n\nconst html = `<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>${ctx.tituloPrefijo}Línea de crédito</title>${css}</head><body>${ctx.bannerHtml}<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\">\n<div class=\"card\">\n  <h1>Línea de crédito y plazo</h1>\n  <form method=\"POST\" action=\"${ctx.urls.confirmar}\">${ctx.campoSesion}\n    <input type=\"hidden\" name=\"numero_documento\" value=\"${webhookB2.body.numero_documento}\">\n    <input type=\"hidden\" name=\"tipo_documento\" value=\"${webhookB2.body.tipo_documento}\">\n    <label for=\"linea_credito\">Línea de crédito</label>\n    <select name=\"linea_credito\" id=\"linea_credito\" required>\n      <option value=\"\">Seleccione una línea de crédito</option>\n      ${optionsHtml}\n    </select>\n    <label for=\"plazo_meses\">Plazo (meses)</label>\n    <input type=\"number\" name=\"plazo_meses\" id=\"plazo_meses\" min=\"6\" max=\"72\" required>\n    <p class=\"hint\">Entre 6 y 72 meses</p>\n    <button type=\"submit\">Continuar</button>\n  </form>\n  <a class=\"btn-back\" href=\"javascript:history.back()\">Atrás</a>\n</div>\n</div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>`;\n\nreturn [{ json: { html } }];\n"
+      }
+    },
+    {
+      "id": "1ac32723-7273-4849-8b2b-145c0fe37bb8",
+      "name": "Respond Error B",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2192,
+        368
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>' + $('Contexto final').first().json.ctx.tituloPrefijo + 'Error</title>     ' + $('Contexto final').first().json.ctx.estilos + ' </head><body>' + $('Contexto final').first().json.ctx.bannerHtml + '<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\"><div class=\"card\"><div class=\"status-icon error\">&#10006;</div><h1>Ocurrió un error</h1><p>' + ($json.mensaje ? $json.mensaje : ($json.error && $json.error.message ? $json.error.message : JSON.stringify($json))) + '</p><a class=\"btn-back\" href=\"' + $('Contexto final').first().json.ctx.urls.inicio + '\">Volver al inicio</a></div></div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>' }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "86d57399-a728-4b3a-8d14-82deafcd3e77",
+      "name": "Webhook C - Confirmar linea de credito",
+      "webhookId": "db1ecedf-2367-442a-bb91-0e866090653e",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        -1008,
+        608
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reconstruye-dev-confirmar",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "ed4bf2e2-5f7e-4f78-b102-42933810e7b9",
+      "name": "Parsear seleccion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        1184
+      ],
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst [subproductoNuevoId, solicitudAnteriorId] = String(body.linea_credito || '').split(':');\nreturn [{ json: {\n  subproducto_nuevo_id: Number(subproductoNuevoId),\n  solicitud_anterior_id: Number(solicitudAnteriorId),\n  plazo_meses: Number(body.plazo_meses),\n} }];\n"
+      }
+    },
+    {
+      "id": "01f7fe7a-34a1-4237-8d5e-13aa467ea0eb",
+      "name": "Buscar solicitud anterior",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "position": [
+        1520,
+        1184
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zNxikoekjqD98VPw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT s.*, c.saldo_prestamo,\n       s2.id AS subproducto_actual_id, s2.name AS subproducto_actual_nombre,\n       s2.producto_id AS producto_id_actual, p.name AS producto_nombre\nFROM cartera c\nJOIN solicitudes s ON s.codigo_gyg = c.num_credito\nJOIN subproductos s2 ON s2.id = s.subproducto_id\nJOIN productos p ON p.id = s2.producto_id\nWHERE s.id = $1\nAND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')",
+            "params": "={{ $json.solicitud_anterior_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "e3ad652a-92d3-4fc9-bee1-d616faab910c",
+      "name": "IF Solicitud Anterior Valida",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1744,
+        1184
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d210f334-d019-4e36-b218-e637a9fca38d",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5bd908f7-f438-4f86-89e1-f9767b7bafac",
+      "name": "Set Error Solicitud Anterior Invalida",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1744,
+        1392
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6f1d2acb-420e-4929-ae40-feccf845085c",
+              "name": "mensaje",
+              "value": "La solicitud anterior ya no es válida o cambió de estado. Vuelve a iniciar el proceso.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "79d415b1-10de-4304-81e3-4f731f1c6cbd",
+      "name": "Validar linea seleccionada",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "position": [
+        1968,
+        1184
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT id AS subproducto_id, name AS subproducto_nombre\nFROM subproductos\nWHERE id = $1 AND producto_id = $2 AND name ILIKE '%RECONSTRUYE%' AND id <> $3",
+            "params": "={{ $('Parsear seleccion').item.json.subproducto_nuevo_id }},{{ $json.producto_id_actual }},{{ $json.subproducto_actual_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "78b2b711-ed01-4b7c-89d0-e905b13697c7",
+      "name": "IF Seleccion Valida",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2192,
+        1184
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "45d3250c-dcb8-4303-a2b5-3b21088d48cb",
+              "leftValue": "={{ $json.subproducto_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "aed45125-8b8d-4ed3-a497-2a1238dec5af",
+              "leftValue": "={{ $('Parsear seleccion').item.json.plazo_meses }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "0b765daf-7588-4969-868a-35d02c3052e9",
+              "leftValue": "={{ $('Parsear seleccion').item.json.plazo_meses }}",
+              "rightValue": 72,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "954804ea-63d6-473f-b82a-3a81971c07a5",
+      "name": "Set Error Seleccion Invalida",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2192,
+        1392
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d8525ef7-2ab0-487a-a619-d1a3bfb3626b",
+              "name": "mensaje",
+              "value": "La línea de crédito o el plazo seleccionado no son válidos.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1b44c269-53be-4d1f-9cac-a369e2c7ebda",
+      "name": "Respond Exito C",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3072,
+        1088
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>' + $('Contexto final').first().json.ctx.tituloPrefijo + 'Solicitud creada</title>     ' + $('Contexto final').first().json.ctx.estilos + ' </head><body>' + $('Contexto final').first().json.ctx.bannerHtml + '<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\"><div class=\"card\"><div class=\"status-icon success\">&#10004;</div><h1>Solicitud creada exitosamente</h1><p>Se creó la nueva solicitud a partir de la solicitud anterior.</p><div class=\"detail-box\">' + ('Solicitud anterior: #' + $('Buscar solicitud anterior').first().json.id + ' (' + $('Buscar solicitud anterior').first().json.subproducto_actual_nombre + ')<br>' + 'Solicitud nueva: #' + $json.nueva_solicitud_id + ' (' + $('Validar linea seleccionada').first().json.subproducto_nombre + ')') + '</div><a class=\"btn-back\" href=\"' + $('Contexto final').first().json.ctx.urls.inicio + '\">Volver al inicio</a></div></div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>' }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "073774ad-c843-4fb5-abe2-482186c3bb5f",
+      "name": "Respond Error C",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3072,
+        1392
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>' + $('Contexto final').first().json.ctx.tituloPrefijo + 'Error</title>     ' + $('Contexto final').first().json.ctx.estilos + ' </head><body>' + $('Contexto final').first().json.ctx.bannerHtml + '<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\"><div class=\"card\"><div class=\"status-icon error\">&#10006;</div><h1>Ocurrió un error</h1><p>' + ($json.mensaje ? $json.mensaje : ($json.error && $json.error.message ? $json.error.message : JSON.stringify($json))) + '</p><a class=\"btn-back\" href=\"' + $('Contexto final').first().json.ctx.urls.inicio + '\">Volver al inicio</a></div></div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>' }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "89a748b7-00d1-4ad2-8380-afa4454d0742",
+      "name": "Diagnosticar solicitud existente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rawRows = $input.all().map(i => i.json);\nconst rows = rawRows.filter(r => r.id != null);\n\nif (rows.length === 0) {\n  return [{ json: { elegible: false, mensaje: 'El cliente no tiene créditos activos que cumplan las condiciones base.' } }];\n}\n\nconst eligibles = rows.filter(r =>\n  r.tiene_negocio && r.tiene_referencias && r.tiene_analisis && r.tiene_documentos && r.sin_reconstruye_previo\n);\n\nif (eligibles.length > 0) {\n  return eligibles.map(r => ({ json: { ...r, elegible: true } }));\n}\n\nconst r = rows[0];\nlet mensaje;\nif (!r.sin_reconstruye_previo) {\n  mensaje = 'El cliente ya tiene una solicitud con subproducto RECONSTRUYE.';\n} else if (!r.tiene_negocio) {\n  mensaje = 'La solicitud existente no tiene información de negocio registrada.';\n} else if (!r.tiene_referencias) {\n  mensaje = 'La solicitud existente no tiene referencias registradas.';\n} else if (!r.tiene_analisis) {\n  mensaje = 'La solicitud existente no tiene análisis registrado.';\n} else if (!r.tiene_documentos) {\n  mensaje = 'La solicitud existente no tiene los documentos requeridos.';\n} else {\n  mensaje = 'No se encontró una solicitud anterior elegible para este cliente.';\n}\n\nreturn [{ json: { elegible: false, mensaje } }];\n"
+      }
+    },
+    {
+      "id": "3439ea3b-2d5d-4317-8672-f986d50f31c2",
+      "name": "Webhook B2 - Recibir credito seleccionado",
+      "webhookId": "e6caa64a-8f56-4dd5-adaf-948ea3ca84d1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        -1008,
+        400
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reconstruye-dev-linea-credito",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "d9dd5208-4385-4158-a0fc-03dfa98c5ce9",
+      "name": "Respond Pagina 2",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2624,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "c7856110-ee8e-4082-93da-1247340d5ed5",
+      "name": "Respond Pagina 3",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2400,
+        640
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "6108ad4e-bd26-43c2-ae3c-00c640d63dde",
+      "name": "Buscar solicitud seleccionada",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "position": [
+        1312,
+        640
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT s.*, c.saldo_prestamo,\n       s2.id AS subproducto_actual_id, s2.name AS subproducto_actual_nombre,\n       s2.producto_id AS producto_id_actual, p.name AS producto_nombre\nFROM cartera c\nJOIN solicitudes s ON s.codigo_gyg = c.num_credito\nJOIN subproductos s2 ON s2.id = s.subproducto_id\nJOIN productos p ON p.id = s2.producto_id\nWHERE s.id = $1\nAND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')",
+            "params": "={{ $json.body.solicitud_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "43ce95d3-d052-4679-bc4c-f13879f49584",
+      "name": "IF Solicitud Seleccionada Valida",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1520,
+        640
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d210f334-d019-4e36-b218-e637a9fca38d",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "16ffb208-4e0b-46da-85a5-7f29764188b4",
+      "name": "Set Error Solicitud Seleccionada Invalida",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        848
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6f1d2acb-420e-4929-ae40-feccf845085c",
+              "name": "mensaje",
+              "value": "La solicitud seleccionada ya no es válida o cambió de estado. Regresa y selecciona otra.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a5099ede-5c1a-4c6e-88df-1a3c511b4993",
+      "name": "Code Construir Pagina 2 - Creditos Activos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto final').first().json.ctx;\nconst rows = $input.all().map(i => i.json);\nconst webhookB = $('Webhook B - Recibir documento').first().json;\n\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));\n\nconst formatMoney = (n) => {\n  const num = Math.round(Number(n) || 0);\n  return num.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');\n};\n\nconst rowsHtml = rows.map((r, idx) => `\n      <tr class=\"${idx === 0 ? 'selected' : ''}\" onclick=\"this.querySelector('input').checked=true;document.querySelectorAll('tbody tr').forEach(tr=>tr.classList.remove('selected'));this.classList.add('selected')\">\n        <td class=\"col-radio\"><input type=\"radio\" name=\"solicitud_id\" value=\"${r.id}\" ${idx === 0 ? 'checked' : ''} required></td>\n        <td>${r.id}</td>\n        <td>${esc(r.subproducto_actual_nombre)}</td>\n        <td>${esc(webhookB.body.tipo_documento)}</td>\n        <td>${esc(webhookB.body.numero_documento)}</td>\n        <td>${esc(r.cliente_nombre)}</td>\n        <td>$${formatMoney(r.saldo_prestamo)}</td>\n      </tr>`).join('');\n\nconst css = `\n    ${ctx.estilos}\n`;\n\nconst html = `<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>${ctx.tituloPrefijo}Créditos activos</title>${css}</head><body>${ctx.bannerHtml}<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container ancho\">\n<div class=\"card\">\n  <h1>Créditos activos</h1>\n  <form method=\"POST\" action=\"${ctx.urls.lineaCredito}\">${ctx.campoSesion}\n    <input type=\"hidden\" name=\"numero_documento\" value=\"${esc(webhookB.body.numero_documento)}\">\n    <input type=\"hidden\" name=\"tipo_documento\" value=\"${esc(webhookB.body.tipo_documento)}\">\n    <div class=\"table-wrap\">\n    <table>\n      <thead><tr><th></th><th>Solicitud</th><th>Subproducto</th><th>Tipo doc</th><th>Identificación</th><th>Cliente</th><th>Saldo</th></tr></thead>\n      <tbody>${rowsHtml}</tbody>\n    </table>\n    </div>\n    <button type=\"submit\">Continuar</button>\n  </form>\n  <a class=\"btn-back\" href=\"javascript:history.back()\">Atrás</a>\n</div>\n</div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>`;\n\nreturn [{ json: { html } }];\n"
+      }
+    },
+    {
+      "id": "c1a0e5d2-6b1f-4a57-9a3e-2f8d1c0b7e11",
+      "name": "Crear solicitud Reconstruye (transaccion)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        2400,
+        1184
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "-- Crea la solicitud RECONSTRUYE y copia toda su información en UNA sola transacción.\n-- Parámetros: 1 = subproducto nuevo, 2 = solicitud anterior, 3 = plazo (meses)\n-- 1) Bloqueo por persona: serializa envíos simultáneos (doble click) del mismo cliente.\nSELECT pg_advisory_xact_lock(hashtext('reconstruye'), s.persona_id) AS lock_reconstruye\nFROM solicitudes s WHERE s.id = $2::integer;\n\n-- 2) Inserta + copia. Si el cliente ya tiene RECONSTRUYE no inserta nada.\nWITH anterior AS (\n  SELECT s.*,\n    (SELECT c.saldo_prestamo FROM cartera c\n      WHERE c.num_credito = s.codigo_gyg\n      AND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')\n      ORDER BY c.fecha_credito DESC LIMIT 1) AS saldo_cartera,\n    (SELECT c.num_credito FROM cartera c\n      WHERE c.num_credito = s.codigo_gyg\n      AND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')\n      ORDER BY c.fecha_credito DESC LIMIT 1) AS num_credito_cartera,\n    (SELECT c.plazo_credito FROM cartera c\n      WHERE c.num_credito = s.codigo_gyg\n      AND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')\n      ORDER BY c.fecha_credito DESC LIMIT 1) AS plazo_cartera,\n    (SELECT c.ejecutivo_id FROM cartera c\n      WHERE c.num_credito = s.codigo_gyg\n      AND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')\n      ORDER BY c.fecha_credito DESC LIMIT 1) AS ejecutivo_cartera,\n    EXISTS (SELECT 1 FROM cartera c\n      WHERE c.num_credito = s.codigo_gyg\n      AND c.descripcion_del_estado NOT IN ('CANCELADO', 'CANCELADO MANUAL')) AS cartera_activa,\n    EXISTS (SELECT 1 FROM solicitudes s_rec\n      JOIN subproductos sp_rec ON sp_rec.id = s_rec.subproducto_id\n      WHERE s_rec.persona_id = s.persona_id\n      AND sp_rec.name ILIKE '%RECONSTRUYE%') AS ya_tiene_reconstruye,\n    (SELECT max(s_rec.id) FROM solicitudes s_rec\n      JOIN subproductos sp_rec ON sp_rec.id = s_rec.subproducto_id\n      WHERE s_rec.persona_id = s.persona_id\n      AND sp_rec.name ILIKE '%RECONSTRUYE%') AS reconstruye_existente_id\n  FROM solicitudes s\n  WHERE s.id = $2::integer\n),\nnueva AS (\n  INSERT INTO solicitudes (\n    created_at, updated_at, solicitud_origen_id, solicitud_medio_id, tipo_credito, plazo_solicitado,\n    monto_solicitado, retoma, estado_solicitud_id, oficina_id, persona_id,\n    subproducto_id, destino_recursos, seguro_voluntario,\n    aliado_id, concesionario_id, exception, usuario_remitente_id, emisora_id\n  )\n  SELECT NOW(), NOW(), a.solicitud_origen_id, a.solicitud_medio_id, a.tipo_credito, $3::integer,\n    a.saldo_cartera::numeric::bigint, a.retoma, 30, a.oficina_id, a.persona_id,\n    $1::integer, a.destino_recursos, a.seguro_voluntario,\n    a.aliado_id, a.concesionario_id, a.exception, a.usuario_remitente_id, a.emisora_id\n  FROM anterior a\n  WHERE a.cartera_activa AND NOT a.ya_tiene_reconstruye\n  RETURNING id\n),\nnegocio AS (\n  INSERT INTO solicitud_negocio (\n    created_at, updated_at, solicitud_id, nombre, antiguedad, antiguedad_local, descripcion_actividad, telefono, celular, barrio, direccion, referencia_ubicacion, sector_economico, tipo_local, empleados_permanentes, empleados_temporales, rut, camara_comercio, registra_compras, registra_ventas, eps, sisben, ciudad_negocio_id, negocio_ciiu_id, responsable_iva, barrio_negocio_id, direccion_homologada, latitud, longitud, tipo_negocio\n  )\n  SELECT NOW(), NOW(), n.id, nombre, antiguedad, antiguedad_local, descripcion_actividad, telefono, celular, barrio, direccion, referencia_ubicacion, sector_economico, tipo_local, empleados_permanentes, empleados_temporales, rut, camara_comercio, registra_compras, registra_ventas, eps, sisben, ciudad_negocio_id, negocio_ciiu_id, responsable_iva, barrio_negocio_id, direccion_homologada, latitud, longitud, tipo_negocio\n  FROM solicitud_negocio o CROSS JOIN nueva n\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\ngestion AS (\n  INSERT INTO solicitud_gestion (\n    solicitud_id, fecha_creacion, fecha_mesa, fecha_ejecutivo,\n    usuario_creacion_id, usuario_ejecutivo_id, role_usuario_creacion_id,\n    role_usuario_ejecutivo_id, fecha_precomite, fecha_ratificacion,\n    role_usuario_precomite_id, role_usuario_ratificacion_id, usuario_precomite_id, usuario_ratificacion_id\n  )\n  SELECT\n    n.id, NOW(), NOW(), NOW(),\n    2, COALESCE(a.ejecutivo_cartera, o.usuario_ejecutivo_id), 38,\n    3,\n    CASE WHEN o.fecha_precomite IS NOT NULL THEN NOW() ELSE NULL END,\n    CASE WHEN o.fecha_ratificacion IS NOT NULL THEN NOW() ELSE NULL END,\n    CASE WHEN o.role_usuario_precomite_id IS NOT NULL THEN 38 ELSE NULL END,\n    CASE WHEN o.role_usuario_ratificacion_id IS NOT NULL THEN 38 ELSE NULL END,\n    CASE WHEN o.usuario_precomite_id IS NOT NULL THEN 2 ELSE NULL END,\n    CASE WHEN o.usuario_ratificacion_id IS NOT NULL THEN 2 ELSE NULL END\n  FROM solicitud_gestion o CROSS JOIN nueva n CROSS JOIN anterior a\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\nanalisis AS (\n  INSERT INTO solicitud_analisis (\n    created_at, updated_at, solicitud_id, ventas, costo_venta, total_gastos, pagos_deudas, utilidad_neta, otros_ingresos, total_gastos_familiar, liquidez_total, capacidad_pago, activos, pasivos, patrimonio, capacidad_pago_porcentaje, capital_trabajo, endeudamiento_actual, endeudamiento_futuro, rotacion, liquidez_financiera, propuesta_economica, plazo_propuesta, cuota_inicial_propuesta, cuota_mensual_propuesta\n  )\n  SELECT NOW(), NOW(), n.id, ventas, costo_venta, total_gastos, pagos_deudas, utilidad_neta, otros_ingresos, total_gastos_familiar, liquidez_total, capacidad_pago, activos, pasivos, patrimonio, capacidad_pago_porcentaje, capital_trabajo, endeudamiento_actual, endeudamiento_futuro, rotacion, liquidez_financiera, propuesta_economica, plazo_propuesta, cuota_inicial_propuesta, cuota_mensual_propuesta\n  FROM solicitud_analisis o CROSS JOIN nueva n\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\nreferencias AS (\n  INSERT INTO solicitud_referencias (\n    created_at, updated_at, estado_referencia, conoce, recomendaria, actividad_economica, observacion, antiguedad, referencia_id, solicitud_id, actividad_economica_adicional, antiguedad_actividad_economica, antiguedad_actividad_economica_adicional, persona_referenciada_id, tipo_referenciado, is_active, parentesco_referencia_id, tipo_referencia_id\n  )\n  SELECT NOW(), NOW(), estado_referencia, conoce, recomendaria, actividad_economica, observacion, antiguedad, referencia_id, n.id, actividad_economica_adicional, antiguedad_actividad_economica, antiguedad_actividad_economica_adicional, persona_referenciada_id, tipo_referenciado, is_active, parentesco_referencia_id, tipo_referencia_id\n  FROM solicitud_referencias o CROSS JOIN nueva n\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\ndocumentos AS (\n  INSERT INTO solicitud_documentos (\n    created_at, updated_at, documento, tipo_documento, solicitud_id, user_id,\n    solicitud_tipo_documento_id, persona_id, rol_id, is_active, analisis_documentos_estado_id\n  )\n  SELECT NOW(), NOW(), documento, tipo_documento, n.id, user_id, solicitud_tipo_documento_id,\n    persona_id, rol_id, is_active, analisis_documentos_estado_id\n  FROM solicitud_documentos o CROSS JOIN nueva n\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\nvehiculo AS (\n  INSERT INTO solicitud_vehiculos (\n    created_at, updated_at, solicitud_id, cuota_inicial_solicitada, impuestos, matricula, soat, valor, tipo_vehiculo_id, linea_id, marca_id, chasis_vehiculo, color_vehiculo, modelo_vehiculo, motor_vehiculo, placa_vehiculo, valor_fasecolda, carroceria_id, clase_vehiculo_id, serie_vehiculo, tipo_servicio_vehiculo_id, is_consulta_verifik_vehiculo, numero_garantia_mobiliaria, codigo_fasecolda, valor_maquinaria, conductor_externo_contrato, conductor_externo_vinculo_id, tipo_conductor_vehiculo_id, fecha_registro_garantia_mobiliaria, monto_garantia_mobiliaria\n  )\n  SELECT NOW(), NOW(), n.id, cuota_inicial_solicitada, impuestos, matricula, soat, valor, tipo_vehiculo_id, linea_id, marca_id, chasis_vehiculo, color_vehiculo, modelo_vehiculo, motor_vehiculo, placa_vehiculo, valor_fasecolda, carroceria_id, clase_vehiculo_id, serie_vehiculo, tipo_servicio_vehiculo_id, is_consulta_verifik_vehiculo, numero_garantia_mobiliaria, codigo_fasecolda, valor_maquinaria, conductor_externo_contrato, conductor_externo_vinculo_id, tipo_conductor_vehiculo_id, fecha_registro_garantia_mobiliaria, monto_garantia_mobiliaria\n  FROM solicitud_vehiculos o CROSS JOIN nueva n\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\nppis AS (\n  INSERT INTO solicitud_ppis (\n    created_at, updated_at, solicitud_id, tamano_hogar, ppi_1, ppi_2, ppi_3, ppi_4, ppi_5, ppi_6, ppi_7, ppi_8, ppi_9, ppi_10, ppi_total\n  )\n  SELECT NOW(), NOW(), n.id, tamano_hogar, ppi_1, ppi_2, ppi_3, ppi_4, ppi_5, ppi_6, ppi_7, ppi_8, ppi_9, ppi_10, ppi_total\n  FROM solicitud_ppis o CROSS JOIN nueva n\n  WHERE o.solicitud_id = $2::integer\n  RETURNING 1\n),\nacta AS (\n  INSERT INTO solicitud_acta (\n    created_at, updated_at, solicitud_id, aprobado, plazo_aprobado, monto_aprobado,\n    recoge_saldo, recoge_saldo_codigo_gyg, periodo_gracia, meses_periodo,\n    central_de_riesgo, comision_mipyme, gastos_transaccionales, fondo_garantias, mensualidad,\n    valor_seguro_deudor, valor_seguro_voluntario, total_mensualidad, valor_seguro_todo_riesgo,\n    garantia_mobiliaria, kiva, valor_seguro_sbs, vinculo_agro, comision_estudio,\n    valor_adquisicion_gps, valor_mensualidad_gps, valor_seguro_todo_riesgo_maquinaria,\n    valor_pre_registro_runt, valor_seguro_agro, valor_seguro_protegidos\n  )\n  SELECT NOW(), NOW(), n.id, true, 0, 0,\n    true, a.num_credito_cartera, true, '2',\n    0, 0, 0, 0, 0,\n    0, 0, 0, 0,\n    0, false, 0, false, 0,\n    0, 0, 0,\n    0, 0, 0\n  FROM nueva n CROSS JOIN anterior a\n  RETURNING 1\n),\nregistro AS (\n  INSERT INTO solicitud_gestion_registro_detallado (\n    fecha_creacion, accion_gestion_registro_id, estado_final_solicitud_id, estado_inicial_solicitud_id,\n    solicitud_id, tiempo_transcurrido, tiempo_transcurrido_texto,\n    tiempo_transcurrido_total_solicitud, tiempo_transcurrido_total_solicitud_texto,\n    rol_id, user_id, responsable_id\n  )\n  SELECT NOW(), v.accion, v.ef, v.ei, n.id, 0, '0', 0, '0', 38, 2, 2\n  FROM nueva n\n  CROSS JOIN (\n    SELECT EXISTS (\n      SELECT 1 FROM solicitud_gestion\n      WHERE solicitud_id = $2::integer AND fecha_ratificacion IS NOT NULL\n    ) AS tiene_ratificacion\n  ) f\n  CROSS JOIN (VALUES\n    (1, 1, 10, 10, 'siempre'),\n    (2, 2, 20, 10, 'siempre'),\n    (3, 3, 20, 20, 'siempre'),\n    (4, 2, 25, 20, 'siempre'),\n    (5, 3, 25, 25, 'siempre'),\n    (6, 2, 30, 25, 'sin_ratificacion'),\n    (7, 2, 26, 25, 'con_ratificacion'),\n    (8, 3, 26, 26, 'con_ratificacion'),\n    (9, 2, 30, 26, 'con_ratificacion')\n  ) AS v(orden, accion, ef, ei, cuando)\n  WHERE v.cuando = 'siempre'\n    OR (v.cuando = 'sin_ratificacion' AND NOT f.tiene_ratificacion)\n    OR (v.cuando = 'con_ratificacion' AND f.tiene_ratificacion)\n  ORDER BY v.orden\n  RETURNING 1\n)\nSELECT\n  (SELECT id FROM nueva) AS nueva_solicitud_id,\n  (SELECT ya_tiene_reconstruye FROM anterior) AS ya_tiene_reconstruye,\n  (SELECT reconstruye_existente_id FROM anterior) AS reconstruye_existente_id,\n  (SELECT cartera_activa FROM anterior) AS cartera_activa,\n  (SELECT count(*) FROM negocio) AS copiados_negocio,\n  (SELECT count(*) FROM gestion) AS copiados_gestion,\n  (SELECT count(*) FROM analisis) AS copiados_analisis,\n  (SELECT count(*) FROM referencias) AS copiados_referencias,\n  (SELECT count(*) FROM documentos) AS copiados_documentos,\n  (SELECT count(*) FROM vehiculo) AS copiados_vehiculo,\n  (SELECT count(*) FROM ppis) AS copiados_ppis,\n  (SELECT count(*) FROM registro) AS copiados_registro,\n  (SELECT count(*) FROM acta) AS creados_acta;\n",
+            "params": "={{ $('Parsear seleccion').item.json.subproducto_nuevo_id }},{{ $('Parsear seleccion').item.json.solicitud_anterior_id }},{{ $('Parsear seleccion').item.json.plazo_meses }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "c1a0e5d2-6b1f-4a57-9a3e-2f8d1c0b7e12",
+      "name": "Verificar creacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        1184
+      ],
+      "parameters": {
+        "jsCode": "// El query devuelve 2 filas: el bloqueo (lock_reconstruye) y el resultado de la creación.\nconst r = $input.all().map(i => i.json).find(j => 'nueva_solicitud_id' in j) || {};\nconst creada = r.nueva_solicitud_id != null;\n\nlet mensaje = '';\nif (!creada) {\n  if (r.ya_tiene_reconstruye) {\n    mensaje = `El cliente ya tiene la solicitud RECONSTRUYE #${r.reconstruye_existente_id}. No se creó una solicitud duplicada.`;\n  } else if (r.cartera_activa === false) {\n    mensaje = 'El crédito anterior ya no está activo en cartera. No se creó la solicitud.';\n  } else {\n    mensaje = 'No se pudo crear la solicitud. No se guardó ningún cambio.';\n  }\n}\n\nreturn [{ json: { ...r, creada, mensaje }, pairedItem: { item: 0 } }];\n"
+      }
+    },
+    {
+      "id": "c1a0e5d2-6b1f-4a57-9a3e-2f8d1c0b7e13",
+      "name": "IF Solicitud Creada",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2848,
+        1184
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5b2f7c1e-3d4a-4e8b-9f61-0a7c2e9d4b31",
+              "leftValue": "={{ $json.creada }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a0e5d2-6b1f-4a57-9a3e-2f8d1c0b7e14",
+      "name": "Set Error Creacion",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2624,
+        1392
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e4d2a6c-1f3b-4c7d-a9e5-6b0f2d8c3a17",
+              "name": "mensaje",
+              "type": "string",
+              "value": "=No se pudo crear la solicitud y no se guardó ningún cambio (la operación se revirtió completa). Detalle: {{ typeof $json.error === 'string' ? $json.error : (($json.error && $json.error.message) || 'revisar la ejecución en n8n') }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "47c989a6-ade3-45ba-be3d-86f92818d382",
+      "name": "Webhook Auth - Callback Microsoft",
+      "webhookId": "85448399-4771-454b-9d6f-18df2e144196",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        -1008,
+        800
+      ],
+      "parameters": {
+        "path": "reconstruye-dev-auth",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "0b004987-33ec-401b-8a6d-8ce1581a644a",
+      "name": "Config Reconstruye",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// ============================================================\n// CONFIGURACIÓN ÚNICA DEL FLUJO RECONSTRUYE (issue #374)\n// ------------------------------------------------------------\n// AMBIENTE: lo define la credencial Postgres de los nodos de base\n//   de datos. Para cambiar de ambiente se cambia esa credencial;\n//   el flujo detecta la base real con current_database() y la\n//   traduce con \"ambientesPorBase\". Si la base no está en el mapa,\n//   el formulario queda bloqueado.\n// SSO: datos de la app registrada en Microsoft Entra ID. El client\n//   secret NO va aquí: está en la credencial\n//   \"Reconstruye · Secreto Entra ID (vence 2027-10-14)\" del nodo \"Auth: canjear codigo\".\n// ============================================================\nconst CONFIG = {\n  ambientesPorBase: {\n    uni2_dev: 'DEV',\n    uni2_qa: 'QA',\n    // '<base de producción>': 'PROD',\n  },\n  sso: {\n    habilitado: true, // inicio de sesión con Microsoft 365: único método de acceso\n    tenantId: 'f6c1b7c0-d15b-446c-baa7-b6392213858a', // directorio de UNI2\n    clientId: '10632875-87cd-4b0f-b3b7-e0fac2f288ee', // app 'n8n Reconstruye' (grupo Desarrollo de Software)\n    dominiosPermitidos: ['uni2.com.co'],\n    duracionSesionSegundos: 3600,\n  },\n};\n\n// La ruta base sale de la URL del webhook que se ejecutó: así las URLs\n// del formulario siempre coinciden con las rutas de los webhooks.\nconst SUFIJOS = { B: '-creditos-activos', B2: '-linea-credito', C: '-confirmar', AUTH: '-auth' };\n\nconst entrada = $input.first().json;\nconst url = String(entrada.webhookUrl || '').split('?')[0].replace(/\\/$/, '');\nlet ruta = 'A';\nlet base = url;\nfor (const [nombre, sufijo] of Object.entries(SUFIJOS)) {\n  if (url.endsWith(sufijo)) {\n    ruta = nombre;\n    base = url.slice(0, -sufijo.length);\n    break;\n  }\n}\n\nconst cookies = {};\nString((entrada.headers || {}).cookie || '').split(';').forEach(par => {\n  const i = par.indexOf('=');\n  if (i <= 0) return;\n  try {\n    cookies[par.slice(0, i).trim()] = decodeURIComponent(par.slice(i + 1).trim());\n  } catch (e) {\n    // cookie mal formada: se ignora\n  }\n});\n\n// n8n Cloud sirve estas páginas con CSP sandbox (origen opaco): el navegador NO envía cookies en los\n// POST del formulario. Por eso la sesión viaja también en el campo oculto \"_sesion\" de cada formulario.\nconst tokenSesion = cookies.rc_sesion || String((entrada.body || {})._sesion || '');\n\nconst urls = {\n  inicio: base,\n  creditos: base + SUFIJOS.B,\n  lineaCredito: base + SUFIJOS.B2,\n  confirmar: base + SUFIJOS.C,\n  auth: base + SUFIJOS.AUTH,\n};\n\nreturn [{ json: { ...entrada, ctx: { config: CONFIG, ruta, urls, cookies, tokenSesion } }, pairedItem: { item: 0 } }];\n"
+      }
+    },
+    {
+      "id": "7715b4f6-c619-4c02-8826-8dc31b1d6c9e",
+      "name": "Detectar ambiente",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "position": [
+        -544,
+        400
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zNxikoekjqD98VPw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/zNxikoekjqD98VPw",
+          "cachedResultName": "Reconstruye · Base de datos (dev - SSO #374)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sql": "SELECT current_database() AS base_datos;",
+            "params": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sql",
+              "displayName": "sql",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "params",
+              "displayName": "params",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "017c8163-cea4-449b-9f76-4627eeacdeea",
+      "name": "Construir contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Traduce la base conectada a un ambiente, arma el banner y decide el control de acceso.\nconst item = $('Config Reconstruye').first().json;\nconst ctx = { ...item.ctx };\nconst cfg = ctx.config;\n\nconst baseDatos = $input.first().json.base_datos || null;\nconst ambiente = (baseDatos && cfg.ambientesPorBase[baseDatos]) || null;\nctx.baseDatos = baseDatos;\nctx.ambiente = ambiente || 'DESCONOCIDO';\nctx.tituloPrefijo = '[' + ctx.ambiente + '] ';\n\n// Banner: un solo color para todos los ambientes; solo cambia el texto.\nconst AVISOS = {\n  DEV: '&#9888; AMBIENTE DE DESARROLLO (DEV)',\n  QA: '&#9888; AMBIENTE DE PRUEBAS (QA)',\n  PROD: 'AMBIENTE DE PRODUCCIÓN (PROD)',\n  DESCONOCIDO: '&#9888; AMBIENTE NO RECONOCIDO',\n};\n// <!--USUARIO--> se reemplaza en \"Contexto final\" con el usuario autenticado\nctx.bannerHtml = '<div class=\"env-banner\"><span>' + AVISOS[ctx.ambiente] + '</span><!--USUARIO--></div>';\n\n// Estilos de TODAS las páginas del formulario (único lugar para cambiar el diseño).\nctx.estilos = `<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link href=\"https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap\" rel=\"stylesheet\">\n<style>\n:root{--naranja:#f08a24;--naranja-osc:#d97316;--naranja-suave:rgba(240,138,36,.14);--texto:#3b3b3b;--texto-suave:#6e6e6e;--borde:#cfd2d6;--linea:#ececec;--fondo:#f4f5f7;--blanco:#fff;--error:#e5484d;--exito:#2f9e62;}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}\nhtml{-webkit-text-size-adjust:100%;}\nbody{min-height:100vh;display:flex;flex-direction:column;background:var(--fondo);font-family:'Nunito','Open Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;color:var(--texto);}\n.env-banner{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 12px;padding:10px 16px;background:var(--naranja);color:#1f1f1f;font-size:13px;font-weight:800;letter-spacing:.4px;text-align:center;}\n.env-banner .sep{opacity:.55;}\n.env-banner .usuario{font-weight:700;}\n.env-banner a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;}\n.navbar{background:var(--blanco);box-shadow:0 1px 6px rgba(0,0,0,.07);padding:14px 16px;display:flex;justify-content:center;}\n.navbar img{height:44px;display:block;}\n.container{width:100%;max-width:480px;margin:auto;padding:32px 16px;}\n.container.ancho{max-width:1080px;}\n.card{background:var(--blanco);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.06);padding:32px 28px;}\n.card h1{font-size:22px;font-weight:700;color:var(--texto);text-align:center;margin-bottom:6px;}\n.card p{color:var(--texto-suave);line-height:1.6;text-align:center;}\nform{display:flex;flex-direction:column;}\nlabel{align-self:flex-start;position:relative;z-index:1;top:9px;margin:14px 0 0 12px;padding:0 6px;background:var(--blanco);font-size:13px;font-weight:600;color:var(--texto-suave);}\ninput,select{width:100%;height:50px;border:1px solid var(--borde);border-radius:6px;padding:0 14px;font:inherit;color:var(--texto);background-color:var(--blanco);transition:border-color .15s,box-shadow .15s;}\nselect{appearance:none;-webkit-appearance:none;padding-right:42px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e6e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 16px center;}\ninput:focus,select:focus{outline:none;border-color:var(--naranja);box-shadow:0 0 0 3px var(--naranja-suave);}\ninput[type=radio]{appearance:none;-webkit-appearance:none;flex:none;width:20px;height:20px;padding:0;border:2px solid #b9bdc5;border-radius:50%;background:var(--blanco);cursor:pointer;vertical-align:middle;transition:border-color .15s,background-color .15s,box-shadow .15s;}input[type=radio]:hover{border-color:var(--naranja);}input[type=radio]:focus{box-shadow:none;}input[type=radio]:focus-visible{box-shadow:0 0 0 4px var(--naranja-suave);}input[type=radio]:checked{border-color:var(--naranja);background:var(--naranja);box-shadow:inset 0 0 0 3px var(--blanco);}input[type=radio]:checked:focus-visible{box-shadow:inset 0 0 0 3px var(--blanco),0 0 0 4px var(--naranja-suave);}\n.hint{font-size:12px;color:var(--texto-suave);margin:6px 2px 0;text-align:left!important;}\nbutton{margin-top:28px;height:48px;border:none;border-radius:24px;background:var(--naranja);color:#fff;font:inherit;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s,transform .05s;}\nbutton:hover{background:var(--naranja-osc);}\nbutton:active{transform:translateY(1px);}\nbutton:disabled{opacity:.65;cursor:not-allowed;}\n.btn-back{display:block;margin-top:12px;height:48px;line-height:46px;border:1.5px solid var(--naranja);border-radius:24px;color:var(--naranja);background:transparent;text-align:center;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:background .15s;}\n.btn-back:hover{background:var(--naranja-suave);}\n.status-icon{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;color:#fff;}\n.status-icon.success{background:var(--exito);}\n.status-icon.error{background:var(--error);}\n.detail-box{background:var(--fondo);border-radius:8px;padding:14px 16px;margin-top:16px;text-align:center;font-size:14px;line-height:1.8;}\n.table-wrap{overflow-x:auto;margin-top:16px;border:1px solid var(--linea);border-radius:10px;}\ntable{width:100%;border-collapse:collapse;min-width:680px;}\nth{background:#fafafa;text-align:left;font-size:12px;font-weight:800;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.5px;padding:12px 10px;border-bottom:1px solid var(--linea);white-space:nowrap;}\ntd{padding:13px 10px;font-size:14px;border-bottom:1px solid var(--linea);word-break:break-word;}\ntbody tr:last-child td{border-bottom:none;}\ntbody tr{cursor:pointer;transition:background .1s;}\ntbody tr:hover{background:#fafafa;}\ntbody tr.selected{background:var(--naranja-suave);}\ntd.col-radio{width:40px;text-align:center;}\n.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:girar .8s linear infinite;vertical-align:-3px;margin-right:8px;}\n@keyframes girar{to{transform:rotate(360deg);} }\n.overlay{position:fixed;inset:0;background:rgba(244,245,247,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;font-weight:700;color:var(--texto);}\n.overlay.show{display:flex;}\n.overlay .spinner{width:38px;height:38px;border-width:3px;border-color:var(--naranja-suave);border-top-color:var(--naranja);margin:0;}\n@media (max-width:600px){.navbar img{height:36px;}.container{padding:20px 12px;}.card{padding:24px 18px;border-radius:10px;}.card h1{font-size:19px;}.env-banner{font-size:12px;}.env-banner .sep{display:none;}}\n</style>`;\n\n// Salidas de \"Control de acceso\": 0 continuar, 1 verificar sesión, 2 iniciar sesión, 3 callback SSO, 4 bloqueado\nlet salida;\nif (!ambiente) {\n  salida = 4;\n  ctx.mensajeBloqueo = 'La base de datos conectada (' + (baseDatos || 'sin conexión') +\n    ') no está registrada en la configuración del flujo. Revisa la credencial Postgres y el nodo \"Config Reconstruye\".';\n} else if (ctx.ruta === 'AUTH') {\n  salida = cfg.sso.habilitado ? 3 : 4;\n  ctx.mensajeBloqueo = 'El inicio de sesión con Microsoft 365 no está habilitado en este flujo.';\n} else if (!cfg.sso.habilitado) {\n  salida = 0;\n} else if (ctx.tokenSesion) {\n  salida = 1;\n} else {\n  salida = 2;\n}\nctx.salidaAcceso = salida;\n\nreturn [{ json: { ...item, ctx }, pairedItem: { item: 0 } }];\n"
+      }
+    },
+    {
+      "id": "1c716d51-a398-4324-aae4-c346d2a7e59f",
+      "name": "Control de acceso",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -96,
+        400
+      ],
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 5,
+        "output": "={{ $json.ctx.salidaAcceso }}"
+      }
+    },
+    {
+      "id": "ee2fd10a-42c7-4437-9c9b-6776a9eea66b",
+      "name": "Verificar sesion",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "onError": "continueErrorOutput",
+      "position": [
+        144,
+        304
+      ],
+      "parameters": {
+        "operation": "verify",
+        "token": "={{ $json.ctx.tokenSesion }}",
+        "options": {}
+      },
+      "credentials": {
+        "jwtAuth": {
+          "id": "tWujlz3CZc6YRlt3",
+          "name": "JWT Sesion Reconstruye"
+        }
+      }
+    },
+    {
+      "id": "2f0651a9-b992-487a-b67a-f5ba9bd61bb3",
+      "name": "Contexto final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Aplica la sesión verificada (si SSO está activo) y decide a qué paso del formulario ir.\nconst item = $('Construir contexto').first().json;\nconst ctx = { ...item.ctx };\nconst sso = ctx.config.sso;\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\n\nlet destino = ctx.ruta;\nctx.campoSesion = '';\nif (sso.habilitado) {\n  const sesion = $input.first().json.payload || {};\n  const email = String(sesion.email || '').toLowerCase();\n  if (sesion.tipo !== 'sesion' || !sso.dominiosPermitidos.some(d => email.endsWith('@' + d.toLowerCase()))) {\n    destino = 'LOGIN';\n  } else {\n    ctx.usuario = { email, nombre: sesion.nombre || '' };\n    // campo oculto que llevan los formularios (ver nota en \"Config Reconstruye\")\n    ctx.campoSesion = '<input type=\"hidden\" name=\"_sesion\" value=\"' + esc(ctx.tokenSesion) + '\">';\n    ctx.bannerHtml = ctx.bannerHtml.replace('<!--USUARIO-->',\n      '<span class=\"sep\">|</span><span class=\"usuario\">' + esc(email) + '</span><a href=\"' + ctx.urls.auth + '?salir=1\">Cerrar sesión</a>');\n  }\n}\n\n// Salidas de \"Router rutas\": 0 página 1, 1 créditos activos, 2 línea de crédito, 3 confirmar, 4 iniciar sesión\nconst i = ['A', 'B', 'B2', 'C'].indexOf(destino);\nctx.salidaRuta = i < 0 ? 4 : i;\n\nreturn [{ json: { ...item, ctx }, pairedItem: { item: 0 } }];\n"
+      }
+    },
+    {
+      "id": "ee2f483c-1a95-4e1b-a249-19cc69e9cc39",
+      "name": "Router rutas",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        592,
+        400
+      ],
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 5,
+        "output": "={{ $json.ctx.salidaRuta }}"
+      }
+    },
+    {
+      "id": "a0d7e502-6b13-4916-aac0-9135b93fa162",
+      "name": "Respond Bloqueado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        144,
+        704
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>' + $('Construir contexto').first().json.ctx.tituloPrefijo + 'Formulario bloqueado</title>     ' + $('Construir contexto').first().json.ctx.estilos + ' </head><body>' + $('Construir contexto').first().json.ctx.bannerHtml + '<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\"><div class=\"card\"><div class=\"status-icon error\">&#10006;</div><h1>Formulario bloqueado</h1><p>' + ($('Construir contexto').first().json.ctx.mensajeBloqueo) + '</p><a class=\"btn-back\" href=\"' + $('Construir contexto').first().json.ctx.urls.inicio + '\">Reintentar</a></div></div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>' }}",
+        "options": {
+          "responseCode": 403,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "f4044229-350b-4e7c-9cb1-b5fdc2d78f89",
+      "name": "IF Pagina inicial",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        800
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a3fb166-2043-403f-8582-ab335ecc004a",
+              "leftValue": "={{ $('Construir contexto').first().json.ctx.ruta === 'A' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "98ef2548-883b-41f0-9b74-463bb9239fb6",
+      "name": "Login: generar nonce",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        592,
+        704
+      ],
+      "parameters": {
+        "action": "generate",
+        "dataPropertyName": "nonce",
+        "encodingType": "hex"
+      }
+    },
+    {
+      "id": "bbad395e-6e65-4383-baad-7b5d485b9245",
+      "name": "Login: firmar state",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "position": [
+        800,
+        704
+      ],
+      "parameters": {
+        "useJson": true,
+        "claimsJson": "={{ JSON.stringify({ tipo: 'state', n: $json.nonce, exp: Math.floor(Date.now() / 1000) + 600 }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "jwtAuth": {
+          "id": "tWujlz3CZc6YRlt3",
+          "name": "JWT Sesion Reconstruye"
+        }
+      }
+    },
+    {
+      "id": "eca5c2e2-4d02-47fc-b56c-53ed8e0a9ad2",
+      "name": "Respond Redirigir a Microsoft",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1024,
+        704
+      ],
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 302,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Location",
+                "value": "={{ 'https://login.microsoftonline.com/' + encodeURIComponent($('Construir contexto').first().json.ctx.config.sso.tenantId) + '/oauth2/v2.0/authorize?client_id=' + encodeURIComponent($('Construir contexto').first().json.ctx.config.sso.clientId) + '&response_type=code&response_mode=query&scope=' + encodeURIComponent('openid profile email') + '&redirect_uri=' + encodeURIComponent($('Construir contexto').first().json.ctx.urls.auth) + '&state=' + encodeURIComponent($json.token) + '&nonce=' + $('Login: generar nonce').first().json.nonce + '&prompt=select_account' }}"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "={{ 'rc_nonce=' + $('Login: generar nonce').first().json.nonce + '; Path=/webhook; Max-Age=600; HttpOnly; Secure; SameSite=Lax' }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "6a1fde6f-55d1-45bb-9744-f3959aff94cb",
+      "name": "Respond Volver al inicio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        592,
+        912
+      ],
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 303,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Location",
+                "value": "={{ $('Construir contexto').first().json.ctx.urls.inicio }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "81615ab9-783f-41ce-ac91-29ee1e757009",
+      "name": "Auth: evaluar callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        1904
+      ],
+      "parameters": {
+        "jsCode": "// Clasifica la respuesta de Microsoft: 0 cerrar sesión, 1 denegado, 2 canjear código\nconst q = $('Construir contexto').first().json.query || {};\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nlet salidaAuth = 2;\nlet motivo = '';\nif (q.salir) {\n  salidaAuth = 0;\n} else if (q.error) {\n  salidaAuth = 1;\n  motivo = q.error === 'access_denied'\n    ? 'Se canceló el inicio de sesión o la cuenta no tiene acceso a esta aplicación.'\n    : 'Microsoft 365 rechazó el inicio de sesión (' + esc(String(q.error).slice(0, 80)) + ').';\n} else if (!q.code || !q.state) {\n  salidaAuth = 1;\n  motivo = 'La respuesta del inicio de sesión llegó incompleta.';\n}\nreturn [{ json: { salidaAuth, motivo }, pairedItem: { item: 0 } }];\n"
+      }
+    },
+    {
+      "id": "b4cf25ac-0373-4e31-bf3e-220a5e9db60a",
+      "name": "Auth: decidir",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        368,
+        1904
+      ],
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ $json.salidaAuth }}"
+      }
+    },
+    {
+      "id": "5026a431-a577-403a-85ac-ef6e9de31d80",
+      "name": "Auth: verificar state",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "onError": "continueErrorOutput",
+      "position": [
+        592,
+        1968
+      ],
+      "parameters": {
+        "operation": "verify",
+        "token": "={{ $('Construir contexto').first().json.query.state }}",
+        "options": {}
+      },
+      "credentials": {
+        "jwtAuth": {
+          "id": "tWujlz3CZc6YRlt3",
+          "name": "JWT Sesion Reconstruye"
+        }
+      }
+    },
+    {
+      "id": "170e5ae0-ddf6-453b-9d94-e880fbd54948",
+      "name": "Auth: canjear codigo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        800,
+        1968
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://login.microsoftonline.com/' + encodeURIComponent($('Construir contexto').first().json.ctx.config.sso.tenantId) + '/oauth2/v2.0/token' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "authorization_code"
+            },
+            {
+              "name": "code",
+              "value": "={{ $('Construir contexto').first().json.query.code }}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "={{ $('Construir contexto').first().json.ctx.urls.auth }}"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $('Construir contexto').first().json.ctx.config.sso.clientId }}"
+            },
+            {
+              "name": "scope",
+              "value": "openid profile email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "BLXGJfzuND0fFwR4",
+          "name": "Reconstruye · Secreto Entra ID (vence 2027-10-14)"
+        }
+      }
+    },
+    {
+      "id": "3c3658e1-b626-4ba9-8859-1b0e371c975c",
+      "name": "Auth: leer id_token",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "onError": "continueErrorOutput",
+      "position": [
+        1024,
+        1968
+      ],
+      "parameters": {
+        "operation": "decode",
+        "token": "={{ $json.id_token }}",
+        "options": {}
+      },
+      "credentials": {
+        "jwtAuth": {
+          "id": "tWujlz3CZc6YRlt3",
+          "name": "JWT Sesion Reconstruye"
+        }
+      }
+    },
+    {
+      "id": "73f4dd3f-8f58-464e-ba6b-7d4151e7c6e9",
+      "name": "Auth: validar identidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        1968
+      ],
+      "parameters": {
+        "jsCode": "// Valida el id_token recibido directamente del endpoint de Microsoft (canal TLS, OIDC 3.1.3.7).\nconst ctx = $('Construir contexto').first().json.ctx;\nconst sso = ctx.config.sso;\nconst state = $('Auth: verificar state').first().json.payload || {};\nconst p = $input.first().json.payload || {};\nconst email = String(p.preferred_username || p.email || p.upn || '').toLowerCase();\nconst ahora = Math.floor(Date.now() / 1000);\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\n\nconst fallas = [];\nif (state.tipo !== 'state' || !state.n) fallas.push('el parámetro state no es válido');\nif (ctx.cookies.rc_nonce !== state.n) fallas.push('el inicio de sesión no corresponde a este navegador');\nif (p.nonce !== state.n) fallas.push('el nonce no coincide');\nif (p.tid !== sso.tenantId) fallas.push('la cuenta no pertenece al directorio de UNI2');\nif (p.aud !== sso.clientId) fallas.push('el token fue emitido para otra aplicación');\nif (!p.exp || p.exp < ahora - 60) fallas.push('el token está vencido');\nif (!sso.dominiosPermitidos.some(d => email.endsWith('@' + d.toLowerCase()))) {\n  fallas.push('la cuenta ' + esc(email || '(sin correo)') + ' no es de un dominio permitido (' + sso.dominiosPermitidos.join(', ') + ')');\n}\n\nreturn [{\n  json: {\n    valido: fallas.length === 0,\n    motivo: fallas.length ? 'Acceso denegado: ' + fallas.join('; ') + '.' : '',\n    sesion: { tipo: 'sesion', email, nombre: p.name || '', oid: p.oid || '', exp: ahora + sso.duracionSesionSegundos },\n  },\n  pairedItem: { item: 0 },\n}];\n"
+      }
+    },
+    {
+      "id": "79b72eee-d43d-452c-acbe-b5eeaa32a52a",
+      "name": "IF Identidad valida",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1472,
+        1968
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a6289169-39a3-44f8-b7aa-b243269b8f9a",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1dd22a7d-b24c-4fe9-b911-51a5ff4cb4c9",
+      "name": "Auth: firmar sesion",
+      "type": "n8n-nodes-base.jwt",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        1872
+      ],
+      "parameters": {
+        "useJson": true,
+        "claimsJson": "={{ JSON.stringify($json.sesion) }}",
+        "options": {}
+      },
+      "credentials": {
+        "jwtAuth": {
+          "id": "tWujlz3CZc6YRlt3",
+          "name": "JWT Sesion Reconstruye"
+        }
+      }
+    },
+    {
+      "id": "855324a8-d546-4326-be6e-85bc722056a9",
+      "name": "Respond Sesion iniciada",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1904,
+        1872
+      ],
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 303,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Location",
+                "value": "={{ $('Construir contexto').first().json.ctx.urls.inicio }}"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "={{ 'rc_sesion=' + $json.token + '; Path=/webhook; Max-Age=' + $('Construir contexto').first().json.ctx.config.sso.duracionSesionSegundos + '; HttpOnly; Secure; SameSite=Lax' }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "4924ce27-7762-448e-83f5-57b506112341",
+      "name": "Respond Acceso denegado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1680,
+        2080
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>' + $('Construir contexto').first().json.ctx.tituloPrefijo + 'Acceso denegado</title>     ' + $('Construir contexto').first().json.ctx.estilos + ' </head><body>' + $('Construir contexto').first().json.ctx.bannerHtml + '<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\"><div class=\"card\"><div class=\"status-icon error\">&#10006;</div><h1>Acceso denegado</h1><p>' + (($json.motivo || 'No fue posible validar tu identidad con Microsoft 365. Ingresa con una cuenta ' + $('Construir contexto').first().json.ctx.config.sso.dominiosPermitidos.map(d => '@' + d).join(' o ') + '.') + (((JSON.stringify($json.error || '').match(/AADSTS\\d+/) || [])[0]) ? ' (código Microsoft: ' + JSON.stringify($json.error).match(/AADSTS\\d+/)[0] + ')' : '')) + '</p><a class=\"btn-back\" href=\"' + $('Construir contexto').first().json.ctx.urls.inicio + '\">Intentar de nuevo</a></div></div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>' }}",
+        "options": {
+          "responseCode": 403,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "a82915ce-deff-4a0a-9588-3fa828683a12",
+      "name": "Respond Sesion cerrada",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        592,
+        1760
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ '<!doctype html><html lang=\"es\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>' + $('Construir contexto').first().json.ctx.tituloPrefijo + 'Sesión cerrada</title>     ' + $('Construir contexto').first().json.ctx.estilos + ' </head><body>' + $('Construir contexto').first().json.ctx.bannerHtml + '<div class=\"navbar\"><img src=\"https://qa-app.uni2.com.co/static/media/finamiga-logo.e0b055b68356be94cbe4.svg\" alt=\"Finamiga\"></div><div class=\"container\"><div class=\"card\"><div class=\"status-icon success\">&#10004;</div><h1>Sesión cerrada</h1><p>' + ('Cerraste la sesión del formulario Reconstruye.') + '</p><a class=\"btn-back\" href=\"' + $('Construir contexto').first().json.ctx.urls.inicio + '\">Iniciar sesión de nuevo</a></div></div><div class=\"overlay\" id=\"cargando\"><span class=\"spinner\"></span><span>Procesando, por favor espera...</span></div><script>(function(){var ov=document.getElementById(\"cargando\");function mostrar(btn){if(btn){btn.disabled=true;btn.setAttribute(\"data-txt\",btn.textContent);btn.textContent=\" Procesando...\";var sp=document.createElement(\"span\");sp.className=\"spinner\";btn.insertBefore(sp,btn.firstChild);} ov.classList.add(\"show\");} function restaurar(){ov.classList.remove(\"show\");document.querySelectorAll(\"form\").forEach(function(f){f.removeAttribute(\"data-enviando\");var b=f.querySelector(\"button\");if(b&&b.getAttribute(\"data-txt\")){b.disabled=false;b.textContent=b.getAttribute(\"data-txt\");} });} document.querySelectorAll(\"form\").forEach(function(f){f.addEventListener(\"submit\",function(e){if(f.getAttribute(\"data-enviando\")){e.preventDefault();return;} f.setAttribute(\"data-enviando\",\"1\");mostrar(f.querySelector(\"button\"));});});document.querySelectorAll(\"a.btn-back\").forEach(function(a){a.addEventListener(\"click\",function(){mostrar(null);});});window.addEventListener(\"pageshow\",function(e){if(e.persisted){restaurar();} });})();</script></body></html>' }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "rc_sesion=; Path=/webhook; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "f2078ee6-176a-4df9-bd4a-8fab42fe7be0",
+      "name": "Nota 0 · Resumen",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        -768
+      ],
+      "parameters": {
+        "content": "# Reconstruye · formulario de Soporte (issue #374)\nRecrea una solicitud activa de un subproducto Reconstruye y la deja en análisis (estado 30).\n\n**Recorrido:** ① todo entra por un bloque común → ② si hay sesión de Microsoft 365 va al paso del formulario (⑥ a ⑨); ③ si no hay sesión envía a Microsoft → ④ Microsoft devuelve al usuario y se crea la sesión (1 h).\n\n**Cambiar de base de datos (DEV / QA / PROD):** abrir el subflujo **Reconstruye · Base de datos** y cambiar la credencial de su nodo **Ejecutar consulta**. Es el único lugar: los nodos de base de datos de este flujo (ícono de subflujo) lo llaman a él.",
+        "height": 560,
+        "width": 2200,
+        "color": 7
+      }
+    },
+    {
+      "id": "26caeb72-096d-423e-9ea2-f63cfdbefca3",
+      "name": "Nota 1 · Entrada común",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        -80
+      ],
+      "parameters": {
+        "content": "## ① Entrada común\nLas 5 rutas (webhooks) entran aquí.\n- **Config Reconstruye**: único punto de configuración (app de Microsoft, dominios permitidos).\n- **Detectar ambiente**: pregunta a la base a qué ambiente está conectada.\n- **Construir contexto**: arma el banner DEV/QA/PROD.\n- **Control de acceso**: decide a qué bloque sigue.",
+        "height": 1040,
+        "width": 1100,
+        "color": 5
+      }
+    },
+    {
+      "id": "7d74a81d-efae-4fce-a0fe-9afd031972c1",
+      "name": "Nota 2 · Sesion valida",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        192
+      ],
+      "parameters": {
+        "content": "## ② Sesión válida\nVerifica la sesión firmada y envía al paso del formulario que corresponde (⑥ a ⑨).",
+        "height": 380,
+        "width": 620,
+        "color": 4
+      }
+    },
+    {
+      "id": "1dc09343-56a4-4f35-a37b-b65052aae703",
+      "name": "Nota 5 · Bloqueo",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        608
+      ],
+      "parameters": {
+        "content": "## ⑤ Bloqueo\nBase de datos no reconocida.",
+        "height": 260,
+        "width": 200,
+        "color": 3
+      }
+    },
+    {
+      "id": "6d44b6f3-4d4d-400a-bfc0-2d4cb5c57530",
+      "name": "Nota 3 · Sin sesion",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        320,
+        608
+      ],
+      "parameters": {
+        "content": "## ③ Sin sesión → Microsoft 365\nPágina de inicio: se genera el código de seguridad y se envía al login de Microsoft.\nOtras páginas: vuelve al inicio.",
+        "height": 460,
+        "width": 840,
+        "color": 6
+      }
+    },
+    {
+      "id": "f75d5cb3-e196-48eb-8573-9c8498761b37",
+      "name": "Nota 4 · Regreso de Microsoft",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        1664
+      ],
+      "parameters": {
+        "content": "## ④ Regreso desde Microsoft\nRevisa cancelaciones y errores, canjea el código por la identidad del usuario, valida directorio, app, vencimiento y dominio, y crea la sesión de 1 hora.",
+        "height": 580,
+        "width": 1940,
+        "color": 6
+      }
+    },
+    {
+      "id": "1c9d463a-38b7-4af1-91ca-f7de8ac2c4ce",
+      "name": "Nota 6 · Paso 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -400
+      ],
+      "parameters": {
+        "content": "## ⑥ Paso 1 · Documento\nFormulario: tipo y número de documento.",
+        "height": 260,
+        "width": 380
+      }
+    },
+    {
+      "id": "34fa3a76-6ef0-491d-92e7-728fbc4717a7",
+      "name": "Nota 7 · Paso 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -96
+      ],
+      "parameters": {
+        "content": "## ⑦ Paso 2 · Créditos activos\nValida el documento, busca las solicitudes del cliente con crédito activo y muestra la tabla para elegir una.",
+        "height": 620,
+        "width": 1500
+      }
+    },
+    {
+      "id": "187b7faf-3d28-4e16-bd9b-871d05c874fa",
+      "name": "Nota 8 · Paso 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        544
+      ],
+      "parameters": {
+        "content": "## ⑧ Paso 3 · Línea de crédito\nCon la solicitud elegida, busca las líneas Reconstruye disponibles y muestra el formulario de línea y plazo.",
+        "height": 460,
+        "width": 1280
+      }
+    },
+    {
+      "id": "360214da-70f8-4a06-881a-02e22dc07b79",
+      "name": "Nota 9 · Paso 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        1040
+      ],
+      "parameters": {
+        "content": "## ⑨ Paso 4 · Crear solicitud\nValida la selección y crea la nueva solicitud en estado 30 (una sola transacción). Muestra éxito o error.",
+        "height": 480,
+        "width": 1940
+      }
+    }
+  ],
+  "connections": {
+    "Validar tipo documento": {
+      "main": [
+        [
+          {
+            "node": "IF Tipo Documento Valido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Tipo Documento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Tipo Documento Valido": {
+      "main": [
+        [
+          {
+            "node": "Buscar solicitud existente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Tipo Documento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar solicitud existente": {
+      "main": [
+        [
+          {
+            "node": "Diagnosticar solicitud existente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Existe Solicitud Elegible": {
+      "main": [
+        [
+          {
+            "node": "Code Construir Pagina 2 - Creditos Activos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar lineas de credito disponibles": {
+      "main": [
+        [
+          {
+            "node": "IF Hay Lineas Disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Sin Lineas Disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Hay Lineas Disponibles": {
+      "main": [
+        [
+          {
+            "node": "Code Construir Pagina 3 - Linea de Credito",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Sin Lineas Disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Tipo Documento": {
+      "main": [
+        [
+          {
+            "node": "Respond Error B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Sin Lineas Disponibles": {
+      "main": [
+        [
+          {
+            "node": "Respond Error B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear seleccion": {
+      "main": [
+        [
+          {
+            "node": "Buscar solicitud anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar solicitud anterior": {
+      "main": [
+        [
+          {
+            "node": "IF Solicitud Anterior Valida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Solicitud Anterior Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Solicitud Anterior Valida": {
+      "main": [
+        [
+          {
+            "node": "Validar linea seleccionada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Solicitud Anterior Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar linea seleccionada": {
+      "main": [
+        [
+          {
+            "node": "IF Seleccion Valida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Seleccion Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Seleccion Valida": {
+      "main": [
+        [
+          {
+            "node": "Crear solicitud Reconstruye (transaccion)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Seleccion Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Solicitud Anterior Invalida": {
+      "main": [
+        [
+          {
+            "node": "Respond Error C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Seleccion Invalida": {
+      "main": [
+        [
+          {
+            "node": "Respond Error C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Diagnosticar solicitud existente": {
+      "main": [
+        [
+          {
+            "node": "IF Existe Solicitud Elegible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Construir Pagina 2 - Creditos Activos": {
+      "main": [
+        [
+          {
+            "node": "Respond Pagina 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar solicitud seleccionada": {
+      "main": [
+        [
+          {
+            "node": "IF Solicitud Seleccionada Valida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Solicitud Seleccionada Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Solicitud Seleccionada Valida": {
+      "main": [
+        [
+          {
+            "node": "Buscar lineas de credito disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Solicitud Seleccionada Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Solicitud Seleccionada Invalida": {
+      "main": [
+        [
+          {
+            "node": "Respond Error B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Construir Pagina 3 - Linea de Credito": {
+      "main": [
+        [
+          {
+            "node": "Respond Pagina 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear solicitud Reconstruye (transaccion)": {
+      "main": [
+        [
+          {
+            "node": "Verificar creacion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Creacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar creacion": {
+      "main": [
+        [
+          {
+            "node": "IF Solicitud Creada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Solicitud Creada": {
+      "main": [
+        [
+          {
+            "node": "Respond Exito C",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Creacion": {
+      "main": [
+        [
+          {
+            "node": "Respond Error C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook A - Servir formulario documento": {
+      "main": [
+        [
+          {
+            "node": "Config Reconstruye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook B - Recibir documento": {
+      "main": [
+        [
+          {
+            "node": "Config Reconstruye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook B2 - Recibir credito seleccionado": {
+      "main": [
+        [
+          {
+            "node": "Config Reconstruye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook C - Confirmar linea de credito": {
+      "main": [
+        [
+          {
+            "node": "Config Reconstruye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Auth - Callback Microsoft": {
+      "main": [
+        [
+          {
+            "node": "Config Reconstruye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Reconstruye": {
+      "main": [
+        [
+          {
+            "node": "Detectar ambiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar ambiente": {
+      "main": [
+        [
+          {
+            "node": "Construir contexto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Construir contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construir contexto": {
+      "main": [
+        [
+          {
+            "node": "Control de acceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Control de acceso": {
+      "main": [
+        [
+          {
+            "node": "Contexto final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verificar sesion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Pagina inicial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auth: evaluar callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesion": {
+      "main": [
+        [
+          {
+            "node": "Contexto final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Pagina inicial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto final": {
+      "main": [
+        [
+          {
+            "node": "Router rutas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router rutas": {
+      "main": [
+        [
+          {
+            "node": "Respond Pagina 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validar tipo documento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar solicitud seleccionada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parsear seleccion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Pagina inicial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Pagina inicial": {
+      "main": [
+        [
+          {
+            "node": "Login: generar nonce",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Volver al inicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login: generar nonce": {
+      "main": [
+        [
+          {
+            "node": "Login: firmar state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login: firmar state": {
+      "main": [
+        [
+          {
+            "node": "Respond Redirigir a Microsoft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: evaluar callback": {
+      "main": [
+        [
+          {
+            "node": "Auth: decidir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: decidir": {
+      "main": [
+        [
+          {
+            "node": "Respond Sesion cerrada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auth: verificar state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: verificar state": {
+      "main": [
+        [
+          {
+            "node": "Auth: canjear codigo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: canjear codigo": {
+      "main": [
+        [
+          {
+            "node": "Auth: leer id_token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: leer id_token": {
+      "main": [
+        [
+          {
+            "node": "Auth: validar identidad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: validar identidad": {
+      "main": [
+        [
+          {
+            "node": "IF Identidad valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Identidad valida": {
+      "main": [
+        [
+          {
+            "node": "Auth: firmar sesion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Acceso denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth: firmar sesion": {
+      "main": [
+        [
+          {
+            "node": "Respond Sesion iniciada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
